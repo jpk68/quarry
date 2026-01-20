@@ -23,7 +23,7 @@ pub fn main(init: std.process.Init) !void {
         } else if (std.mem.eql(u8, arg, "--rpc-port")) {
             if (args.next()) |port| {
                 config.node_rpc_port = std.fmt.parseInt(u16, port, 10) catch {
-                    std.log.err("Invalid port number: '{d}'", .{port});
+                    std.log.err("Invalid port number: '{s}'", .{port});
                     std.process.exit(1);
                 };
             } else {
@@ -33,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
         } else if (std.mem.eql(u8, arg, "--zmq-port")) {
             if (args.next()) |port| {
                 config.node_zmq_port = std.fmt.parseInt(u16, port, 10) catch {
-                    std.log.err("Invalid port number: '{d}'", .{port});
+                    std.log.err("Invalid port number: '{s}'", .{port});
                     std.process.exit(1);
                 };
             } else {

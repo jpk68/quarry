@@ -23,6 +23,7 @@ pub fn init(io: Io, config: *Config) !Server {
         .nano => 37890,
     });
 
+    // This should be a random u64
     const random_number = 1234;
 
     return .{
