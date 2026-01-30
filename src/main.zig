@@ -40,6 +40,26 @@ pub fn main(init: std.process.Init) !void {
                 std.log.err("An argument must be provided for '{s}'", .{arg});
                 std.process.exit(1);
             }
+        } else if (std.mem.eql(u8, arg, "--max-peers-outgoing")) {
+            if (args.next()) |n| {
+                config.max_peers_outgoing = std.fmt.parseInt(u32, n, 10) catch {
+                    std.log.err("Invalid number: '{s}'", .{n});
+                    std.process.exit(1);
+                };
+            } else {
+                std.log.err("An argument must be provided for '{s}'", .{arg});
+                std.process.exit(1);
+            }
+        } else if (std.mem.eql(u8, arg, "--max-peers-incoming")) {
+            if (args.next()) |n| {
+                config.max_peers_incoming = std.fmt.parseInt(u32, n, 10) catch {
+                    std.log.err("Invalid number: '{s}'", .{n});
+                    std.process.exit(1);
+                };
+            } else {
+                std.log.err("An argument must be provided for '{s}'", .{arg});
+                std.process.exit(1);
+            }
         } else {
             std.log.err("Invalid command: '{s}'", .{arg});
             std.process.exit(1);

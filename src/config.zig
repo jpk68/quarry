@@ -7,8 +7,8 @@ pub const Config = struct {
     node_rpc_port: u16,
     node_zmq_port: u16,
 
-    max_peers_outgoing: usize,
-    max_peers_incoming: usize,
+    max_peers_outgoing: u32,
+    max_peers_incoming: u32,
 
     pub fn init() Config {
         return .{
@@ -18,8 +18,8 @@ pub const Config = struct {
             .node_rpc_port = 18081,
             .node_zmq_port = 18083,
 
-            .max_peers_outgoing = 8,
-            .max_peers_incoming = 2,
+            .max_peers_outgoing = 10,
+            .max_peers_incoming = 450,
         };
     }
 };
