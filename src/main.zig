@@ -1,6 +1,6 @@
 const std = @import("std");
 const common = @import("common.zig");
-const Config = @import("config.zig").Config;
+const Server = @import("net/Server.zig");
 
 const version_string: []const u8 = "0.0.0";
 
@@ -86,7 +86,41 @@ pub fn main(init: std.process.Init) !void {
             std.process.exit(1);
         }
     }
+
+    if (config.data_dir_path == null) {
+        const path = init.environ_map.get("HOME");
+    }
+
+    const io = init.io;
+    _ = io;
+
+    const server = Server.init(io, config);
+    defer server.deinit();
 }
+
+const Config = struct {
+    network_type: common.NetworkType,
+    sidechain_type: common.SidechainType,
+
+    node_rpc_port: u16,
+    node_zmq_port: u16,
+
+    max_peers_outgoing: u32,
+    max_peers_incoming: u32,
+
+    pub fn init() Config {
+        return .{
+            .network_type = .mainnet,
+            .sidechain_type = .main,
+
+            .node_rpc_port = 18081,
+            .node_zmq_port = 18083,
+
+            .max_peers_outgoing = 10,
+            .max_peers_incoming = 450,
+        };
+    }
+};
 
 fn printUsage() void {
     std.debug.print(
