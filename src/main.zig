@@ -1,4 +1,6 @@
 const std = @import("std");
+const Io = std.Io;
+
 const common = @import("common.zig");
 const Server = @import("net/Server.zig");
 
@@ -87,15 +89,18 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    if (config.data_dir_path == null) {
-        const path = init.environ_map.get("HOME");
-    }
+    // For now, the data path is the current directory
+    config.data_dir_path = Io.Dir.cwd();
 
     const io = init.io;
-    _ = io;
+    const gpa = init.gpa;
 
-    const server = Server.init(io, config);
+    // Init server with config options
+    const server = Server.init(gpa, io, config);
     defer server.deinit();
+
+    // Run the server
+    try server.run();
 }
 
 const Config = struct {
@@ -108,6 +113,8 @@ const Config = struct {
     max_peers_outgoing: u32,
     max_peers_incoming: u32,
 
+    data_dir_path: ?Io.Dir,
+
     pub fn init() Config {
         return .{
             .network_type = .mainnet,
@@ -118,6 +125,8 @@ const Config = struct {
 
             .max_peers_outgoing = 10,
             .max_peers_incoming = 450,
+
+            .data_dir_path = null,
         };
     }
 };
