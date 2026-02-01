@@ -95,9 +95,13 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const gpa = init.gpa;
 
-    // Init server with config options
-    const server = Server.init(gpa, io, config);
-    defer server.deinit();
+    // Init server with options from config
+    const server = Server{
+        .allocator = gpa,
+        .io = io,
+        .max_peers_outgoing = config.max_peers_outgoing,
+        .max_peers_incoming = config.max_peers_incoming,
+    };
 
     // Run the server
     try server.run();
