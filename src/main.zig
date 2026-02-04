@@ -3,6 +3,7 @@ const Io = std.Io;
 
 const common = @import("common.zig");
 const Server = @import("net/Server.zig");
+const NodeReader = @import("net/NodeReader.zig");
 
 const version_string: []const u8 = "0.0.0";
 
@@ -105,12 +106,18 @@ pub fn main(init: std.process.Init) !void {
 
     // Run the server
     try server.run();
+
+    const node_reader = try NodeReader.init(config.node_ip, config.node_zmq_port);
+    defer node_reader.deinit();
+
+    try node_reader.run();
 }
 
 const Config = struct {
     network_type: common.NetworkType,
     sidechain_type: common.SidechainType,
 
+    node_ip: ?[]const u8,
     node_rpc_port: u16,
     node_zmq_port: u16,
 
@@ -124,6 +131,7 @@ const Config = struct {
             .network_type = .mainnet,
             .sidechain_type = .main,
 
+            .node_ip = null,
             .node_rpc_port = 18081,
             .node_zmq_port = 18083,
 
