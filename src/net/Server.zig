@@ -2,88 +2,60 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
+const net = Io.net;
 
 const Server = @This();
 
 // TODO
-// Reader/writer loop
-// Use better names
-// Error handling for defer catch {};
+// Version info
+// Ban list entries
 
 allocator: Allocator,
 io: Io,
-server_id: u64 = undefined,
-max_peers_outgoing: u32,
-max_peers_incoming: u32,
+info: ServerInfo,
 peer_list: std.SinglyLinkedList = .{},
 
-pub fn run(self: *Server) !void {
-    // Set random ID number for this server
-    const random_number: u64 = 431241321324;
-    self.server_id = random_number;
+pub const PeerInfo = struct {
+    host: net.IpAddress,
+    failed_connections: u32,
+    last_seen_timestamp: u64,
+};
 
-    // Set port number based on which sidechain we're using
-    const listen_port = @as(u16, switch (self.config.sidechain_type) {
+const ServerInfo = struct {
+    /// This server's clearnet peer ID.
+    peer_id: u64,
+    /// Maximum number of incoming/outgoing peers.
+    /// Defaults are specified in the config file.
+    max_peers_outgoing: u32,
+    max_peers_incoming: u32,
+};
+
+pub fn run(self: *Server) !void {
+    const rand_io: std.Random.IoSource = .{ .io = self.io };
+    const rand: std.Random = rand_io.interface();
+    self.info.peed_id = rand.int(u64);
+
+    std.log.debug("Set random server ID: {d}", .{self.info.peer_id});
+
+    const port = @as(u16, switch (self.config.sidechain_type) {
         .main => 37889,
         .mini => 37888,
         .nano => 37890,
     });
 
-    const listen_addr = try Io.net.IpAddress.parse("127.0.0.1", listen_port);
-    var listen_sock = try Io.net.IpAddress.listen(listen_addr, self.io, .{});
+    const addr = try net.IpAddress.parse("127.0.0.1", port);
+    var tcp = try net.IpAddress.listen(addr, self.io, .{});
 
-    var task = try self.io.concurrent(acceptLoop, .{ self, &listen_sock });
-    defer task.cancel(self.io) catch {};
-    try task.await(self.io);
-}
+    var client_group: Io.Group = .init;
+    defer client_group.cancel(self.io);
 
-fn acceptLoop(self: *Server, sock: *Io.net.Server) !void {
-    // Clean up socket when loop ends
-    defer sock.deinit(self.io);
+    std.log.debug("Server listening on port {d}", .{port});
 
     while (true) {
-        // Blocks waiting for a TCP connection
-        const stream = try sock.accept(self.io);
+        std.log.debug("Attempting to accept client", .{});
+        const stream = try tcp.accept(self.io);
+        std.log.debug("Accepted connection", .{});
 
-        // Each peer connection makes progress independently
-        // This spawns a concurrent task per connection
-        var peer_task = try self.io.concurrent(handlePeer, .{ self, stream });
-        // Cancel peer if the loop exits early
-        defer peer_task.cancel(self.io) catch {};
+        _ = client_group.concurrent(self.io, handleConnection, .{});
     }
 }
-
-fn handlePeer(self: *Server, stream: Io.net.Stream) !void {
-    // Clean up stream when loop ends
-    defer stream.close(self.io);
-
-    var in_queue: Io.Queue([]u8) = .init(&.{});
-    var out_queue: Io.Queue([]u8) = .init(&.{});
-
-    var reader = try self.io.concurrent(readerLoop, .{ self, stream, &in_queue });
-    defer reader.cancel(self.io) catch {};
-
-    var writer = try self.io.concurrent(writerLoop, .{ self, stream, &out_queue });
-    defer writer.cancel(self.io) catch {};
-
-    while (true) {
-        const msg = in_queue.getOne(self.io);
-
-        std.log.debug("Received message: {s}", .{msg});
-    }
-}
-
-const MessageType = enum {
-    handshake_challenge,
-    handshake_solution,
-    listen_port,
-    block_request,
-    block_response,
-    block_broadcast,
-    peer_list_request,
-    peer_list_response,
-    block_broadcast_compact,
-    block_notify,
-    //aux_job_donation,
-    monero_block_broadcast,
-};

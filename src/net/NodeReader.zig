@@ -39,7 +39,10 @@ pub fn connect(self: *NodeReader) !void {
 
     const fmt = try std.fmt.bufPrint(&buf, "tcp://127.0.0.1:{}", .{port});
 
-    std.debug.print("Result: {s}\n", .{fmt});
+    // TODO
+    // zmq_setsockopt()
+    // set proxy/sub to monerod stream
+    // random port number
 
     _ = self;
 }
