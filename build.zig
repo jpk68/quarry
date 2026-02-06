@@ -4,6 +4,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const randomx = b.addModule("randomx", .{
+        .root_source_file = b.path("src/randomx/root.zig"),
+        .target = target,
+    });
+
     const exe = b.addExecutable(.{
         .name = "quarry",
         .root_module = b.createModule(.{
@@ -11,6 +16,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "randomx", .module = randomx },
+            },
         }),
     });
 
@@ -29,6 +37,12 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
+    const randomx_tests = b.addTest(.{
+        .root_module = randomx,
+    });
+
+    const run_randomx_tests = b.addRunArtifact(randomx_tests);
+
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
     });
@@ -36,5 +50,6 @@ pub fn build(b: *std.Build) void {
     const run_exe_tests = b.addRunArtifact(exe_tests);
 
     const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&run_randomx_tests.step);
     test_step.dependOn(&run_exe_tests.step);
 }
