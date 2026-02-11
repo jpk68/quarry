@@ -5,6 +5,11 @@ const common = @import("common.zig");
 const Server = @import("net/Server.zig");
 const NodeReader = @import("net/NodeReader.zig");
 
+// TODO
+// Add config options for data_dir_path and node_ip
+// Use more sane defaults
+// Use appropriate allocator per build mode
+
 const version_string: []const u8 = "0.0.0";
 
 const usage =
@@ -110,11 +115,27 @@ fn parseArgs(io: Io, args: std.process.Args) !Config {
 }
 
 pub fn main(init: std.process.Init.Minimal) !void {
-    var threaded: Io.Threaded = .init_single_threaded;
-    const io = threaded.io();
+    var gpa = std.heap.DebugAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    const config = try parseArgs(io, init.args);
-    _ = config;
+    var threaded: Io.Threaded = .init(allocator);
+    defer threaded.deinit();
+
+    const config = try parseArgs(threaded, init.args);
+    config.data_dir_path = Io.Dir.cwd();
+
+    const server = Server{
+        .allocator = allocator,
+        .io = threaded,
+        .max_peers_outgoing = config.max_peers_outgoing,
+        .max_peers_incoming = config.max_peers_incoming,
+    };
+    try server.start();
+
+    const node_reader = try NodeReader.init(config.node_ip, config.node_zmq_port);
+    defer node_reader.deinit();
+    try node_reader.start();
 }
 
 const Config = struct {

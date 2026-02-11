@@ -4,6 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // RandomX is compiled as a separate unit
     const randomx = b.addModule("randomx", .{
         .root_source_file = b.path("src/randomx/root.zig"),
         .target = target,
@@ -15,11 +16,14 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            // Needed for linking libzmq
             .link_libc = true,
             .imports = &.{
                 .{ .name = "randomx", .module = randomx },
             },
         }),
+        // Zig's self-hosted backend currently has some issues with C interop
+        .use_llvm = true,
     });
 
     exe.root_module.linkSystemLibrary("libzmq", .{});
@@ -53,6 +57,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_randomx_tests.step);
     test_step.dependOn(&run_exe_tests.step);
 
+    // Custom directive to format and check source files
     const fmt = b.addFmt(.{
         .check = b.option(bool, "fmtcheck", "fmtcheck") orelse false,
         .paths = &.{
