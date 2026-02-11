@@ -79,8 +79,13 @@ pub fn connect(self: *NodeReader) !void {
     }
 }
 
+pub const ChainInfo = struct {
+    minor_version: u8,
+    block_height: u64,
+};
+
 test "create and destroy context/sockets" {
-    var threaded: std.Io.Threaded = .init_single_threaded;
+    var threaded: Io.Threaded = .init_single_threaded;
     const io = threaded.io();
 
     var node = try NodeReader.init(io);

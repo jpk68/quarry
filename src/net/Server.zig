@@ -51,6 +51,9 @@ pub fn run(self: *Server) !void {
 
     std.log.debug("Server listening on port {d}", .{port});
 
+    var client_group: Io.Group = .init;
+    defer client_group.cancel(io);
+
     while (true) {
         std.log.debug("Attempting to accept client", .{});
         const stream = try tcp.accept(self.io);
@@ -58,4 +61,17 @@ pub fn run(self: *Server) !void {
 
         _ = client_group.concurrent(self.io, handleConnection, .{});
     }
+}
+
+pub fn handleConnection(self: *Server, stream: *net.Stream) !void {
+    defer stream.close(io);
+
+    const clock: Io.Clock = .real;
+
+    // TODO
+    const write_buf: []u8 = undefined;
+
+    var client = Client.init(null, &recv_queue, in, out);
+
+    var client_task = try io.concurrent();
 }

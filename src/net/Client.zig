@@ -1,2 +1,3 @@
-// TODO
-// Peer list info, etc.
+const std = @import("std");
+
+peer_id: u64,
