@@ -6,7 +6,8 @@
 // main_chain
 // monero_block_broadcast_header
 
-pub const Hash = [32]u8;
+pub const hash_size: usize = 32;
+pub const Hash = [hash_size]u8;
 
 pub const NetworkType = enum {
     mainnet,

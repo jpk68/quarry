@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 const Io = std.Io;
 const net = Io.net;
 
+const Client = @import("Client.zig");
 const Server = @This();
 
 // TODO
@@ -33,7 +34,7 @@ const ServerInfo = struct {
 pub fn run(self: *Server) !void {
     const rand_io: std.Random.IoSource = .{ .io = self.io };
     const rand: std.Random = rand_io.interface();
-    self.info.peed_id = rand.int(u64);
+    self.info.peer_id = rand.int(u64);
 
     std.log.debug("Set random server ID: {d}", .{self.info.peer_id});
 
@@ -51,27 +52,24 @@ pub fn run(self: *Server) !void {
 
     std.log.debug("Server listening on port {d}", .{port});
 
-    var client_group: Io.Group = .init;
-    defer client_group.cancel(io);
-
     while (true) {
         std.log.debug("Attempting to accept client", .{});
         const stream = try tcp.accept(self.io);
         std.log.debug("Accepted connection", .{});
 
-        _ = client_group.concurrent(self.io, handleConnection, .{});
+        _ = client_group.async(self.io, handleConnection, .{ self.io, stream });
     }
 }
 
 pub fn handleConnection(self: *Server, stream: *net.Stream) !void {
-    defer stream.close(io);
+    defer stream.close(self.io);
 
     const clock: Io.Clock = .real;
 
     // TODO
     const write_buf: []u8 = undefined;
 
-    var client = Client.init(null, &recv_queue, in, out);
+    //var client = Client.init(null, &recv_queue, in, out);
 
-    var client_task = try io.concurrent();
+    var client_task = try self.io.concurrent();
 }

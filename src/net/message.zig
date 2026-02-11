@@ -1,4 +1,4 @@
-pub const MessageType = enum {
+pub const MessageType = union(enum) {
     handshake_challenge,
     handshake_solution,
     listen_port,

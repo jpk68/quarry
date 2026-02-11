@@ -14,7 +14,7 @@ Not much works yet, but stay tuned.
 
 ### Build from source
 
-Building requires the latest [Zig master build](https://ziglang.org/download/).
+Building requires the latest [Zig master build](https://ziglang.org/download/) and `libzmq`.
 
 ```bash
 git clone https://codeberg.org/jpk68/quarry
