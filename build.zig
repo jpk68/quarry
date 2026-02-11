@@ -52,4 +52,14 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_randomx_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+
+    const fmt = b.addFmt(.{
+        .check = b.option(bool, "fmtcheck", "fmtcheck") orelse false,
+        .paths = &.{
+            "src",
+            "build.zig",
+            "build.zig.zon",
+        },
+    });
+    b.step("fmt", "Format source files").dependOn(&fmt.step);
 }
