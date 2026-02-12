@@ -1,5 +1,7 @@
 const std = @import("std");
 const c = @cImport(@cInclude("zmq.h"));
+
+const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
 // TODO
@@ -7,6 +9,7 @@ const Io = std.Io;
 // set proxy/sub to monerod stream
 // create monitor thread
 
+allocator: Allocator,
 io: Io,
 zmq_ctx: *anyopaque,
 zmq_sock_sub: *anyopaque,
@@ -15,7 +18,7 @@ zmq_port_pub: ?u16,
 
 const NodeReader = @This();
 
-pub fn init(io: Io) !NodeReader {
+pub fn init(allocator: Allocator, io: Io) !NodeReader {
     const ctx = c.zmq_ctx_new() orelse return error.CreateContextFailed;
     errdefer _ = c.zmq_ctx_destroy(ctx);
 
@@ -26,6 +29,7 @@ pub fn init(io: Io) !NodeReader {
     errdefer _ = c.zmq_close(sock_pub);
 
     return .{
+        .allocator = allocator,
         .io = io,
         .zmq_ctx = ctx,
         .zmq_sock_sub = sock_sub,
@@ -40,7 +44,7 @@ pub fn deinit(self: *NodeReader) void {
     _ = c.zmq_ctx_destroy(self.zmq_ctx);
 }
 
-pub fn connect(self: *NodeReader) !void {
+pub fn start(self: *NodeReader) !void {
     // Initialize PRNG and obtain its interface. Uses Xoshiro256 by default.
     const rand_io: std.Random.IoSource = .{ .io = self.io };
     const rand: std.Random = rand_io.interface();
