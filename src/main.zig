@@ -6,9 +6,10 @@ const Server = @import("net/Server.zig");
 const NodeReader = @import("net/NodeReader.zig");
 
 // TODO
-// Add config options for data_dir_path and node_ip
+// Add config options for data_dir and node_ip
 // Use more sane defaults
 // Use appropriate allocator per build mode
+// Don't use current directory to store everything
 
 const version_string: []const u8 = "0.0.0";
 
@@ -123,19 +124,26 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer threaded.deinit();
 
     const config = try parseArgs(threaded, init.args);
-    config.data_dir_path = Io.Dir.cwd();
+    config.data_dir = Io.Dir.cwd();
 
     const server = Server{
         .allocator = allocator,
         .io = threaded,
-        .max_peers_outgoing = config.max_peers_outgoing,
-        .max_peers_incoming = config.max_peers_incoming,
+        .info = .{
+            .max_peers_outgoing = config.max_peers_outgoing,
+            .max_peers_incoming = config.max_peers_incoming,
+            .sidechain_type = config.sidechain_type,
+            .data_dir = config.data_dir,
+        },
     };
     try server.start();
 
     const node_reader = try NodeReader.init(config.node_ip, config.node_zmq_port);
     defer node_reader.deinit();
     try node_reader.start();
+
+    // TODO
+    // Cache, mempool, sidechain, wallet, miner
 }
 
 const Config = struct {
@@ -148,5 +156,5 @@ const Config = struct {
     max_peers_outgoing: u32 = 10,
     max_peers_incoming: u32 = 450,
 
-    data_dir_path: ?Io.Dir = null,
+    data_dir: ?Io.Dir = null,
 };

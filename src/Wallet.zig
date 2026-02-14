@@ -2,6 +2,9 @@ const std = @import("std");
 const common = @import("common.zig");
 const Wallet = @This();
 
+// TODO
+// This entire thing
+
 const address_len: usize = 95;
 
 prefix: u64,

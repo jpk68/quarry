@@ -3,20 +3,19 @@ const Io = std.Io;
 
 pub const BlockCache = struct {
     io: Io,
-    path: Io.Dir,
+    file: ?Io.File,
+    file_size: ?usize,
 
-    pub fn init(io: Io, path: Io.Dir) BlockCache {
+    pub fn init(io: Io, dir: Io.Dir) !BlockCache {
         return .{
             .io = io,
-            .path = path,
+            .file = null,
+            .file_size = null,
         };
     }
 
     pub fn saveData(self: *BlockCache, data: []const u8) !void {
-        const file = try self.path.createFile(self.io, "p2pool_cache", .{});
-        defer file.close(self.io);
-
-        try file.writeAll(self.io, data);
+        try self.file.writeAll(self.io, data);
         std.log.debug("Finished writing data to cache file", .{});
     }
 };
