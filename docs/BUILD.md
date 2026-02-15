@@ -16,7 +16,7 @@ sudo apt install libzmq3-dev
 
 ### Arch
 ```bash
-sudo pacman -S libzmq --needed
+sudo pacman -S zeromq --needed
 ```
 
 ## Build steps
