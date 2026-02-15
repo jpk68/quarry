@@ -5,6 +5,8 @@ pub const argon_salt = "RandomX\x03";
 
 pub const cache_accesses = 8;
 
+pub const superscalar_latency = 170;
+
 pub const dataset_base_size = 2147483648;
 pub const dataset_extra_size = 33554368;
 
