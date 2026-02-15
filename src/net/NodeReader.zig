@@ -44,7 +44,7 @@ pub fn deinit(self: *NodeReader) void {
     _ = c.zmq_ctx_destroy(self.zmq_ctx);
 }
 
-pub fn start(self: *NodeReader) !void {
+pub fn run(self: *NodeReader) !void {
     // Initialize PRNG and obtain its interface. Uses Xoshiro256 by default.
     const rand_io: std.Random.IoSource = .{ .io = self.io };
     const rand: std.Random = rand_io.interface();

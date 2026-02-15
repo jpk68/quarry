@@ -1,12 +1,11 @@
 const std = @import("std");
-const Io = std.Io;
-
 const common = @import("common.zig");
 
+const Io = std.Io;
+
 // TODO
-// Add config options for data_dir and node_ip
+// Add config options for data_dir and node_addr
 // Use more sane defaults
-// Don't use current directory to store everything
 
 const version_string: []const u8 = "0.0.0";
 
@@ -14,12 +13,13 @@ const usage =
     \\Usage: quarry <options>
     \\
     \\Options:
-    \\  --help                  Print help message
-    \\  --version               Print version info
+    \\  --help, -h              Print help message
+    \\  --version, -v           Print version and build info
     \\
     \\  --network               Monero network type (default: Mainnet)
     \\  --sidechain             P2Pool sidechain type (default: Main)
     \\
+    \\  --node                  Address of Monero node (default: localhost)
     \\  --rpc-port              RPC port of Monero daemon (default: 18081)
     \\  --zmq-port              ZMQ port of Monero daemon (default: 18083)
     \\
@@ -33,6 +33,7 @@ const Config = @This();
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
 
+node_addr: ?[]const u8 = null,
 node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
 
@@ -48,8 +49,7 @@ fn parseArgs(io: Io, args: std.process.Args) !Config {
     var args_it = args.iterate();
     _ = args_it.next();
 
-    var arg_i: usize = 0;
-    while (args_it.next()) |arg| : (arg_i += 1) {
+    while (args_it.next()) |arg| {
         if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
             try Io.File.stdout().writeStreamingAll(io, usage);
             std.process.exit(0);
@@ -122,6 +122,7 @@ fn parseArgs(io: Io, args: std.process.Args) !Config {
         }
     }
 
+    result.node_addr = "127.0.0.1";
     result.data_dir = Io.Dir.cwd();
 
     return result;

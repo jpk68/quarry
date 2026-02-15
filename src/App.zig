@@ -10,7 +10,7 @@ const NodeReader = @import("net/NodeReader.zig");
 const App = @This();
 
 // TODO
-// Cache, mempool, sidechain, wallet, miner
+// Init cache, mempool, sidechain, wallet, miner/hasher
 
 allocator: Allocator,
 io: Io,

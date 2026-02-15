@@ -43,9 +43,8 @@ const ServerInfo = struct {
 };
 
 pub fn run(self: *Server) !void {
-    const rand_inst: std.Random.IoSource = .{ .io = self.io };
-    const rand: std.Random = rand_inst.interface();
-    self.info.peer_id = rand.int(u64);
+    // Set peer_id to a random u64
+    Io.random(self.io, &self.info.peer_id);
 
     std.log.debug("Set random server ID: {d}", .{self.info.peer_id});
 
