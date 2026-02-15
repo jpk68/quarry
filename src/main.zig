@@ -1,16 +1,18 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const Io = std.Io;
 
 const Config = @import("Config.zig");
 const App = @import("App.zig");
 
-// TODO
-// Use appropriate allocator per build mode
-
 pub fn main(init: std.process.Init.Minimal) !void {
-    var gpa = std.heap.DebugAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    var gpa_inst: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = if (builtin.mode == .Debug) gpa_inst.allocator() else std.heap.smp_allocator;
+
+    defer if (builtin.mode == .Debug) {
+        _ = gpa_inst.deinit();
+    };
 
     var threaded: Io.Threaded = .init(allocator);
     defer threaded.deinit();
