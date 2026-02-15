@@ -1,13 +1,13 @@
 # Build instructions
 
 > [!WARNING]
-> This software is largely a work-in progress; builds will likely fail at this time.
+> This software is largely a work-in-progress; builds will likely fail at this time.
 
 ## Prerequisites
 
 Building requires the latest release of [Zig master](https://ziglang.org/download/) and `libzmq`.
 
-Follow [these instructions](https://ziglang.org/learn/getting-started/) to download Zig, and use the appropriate command below to install needed libraries for your platform.
+Follow [these instructions](https://ziglang.org/learn/getting-started/) to download Zig, and use the appropriate command below to install the needed libraries for your platform.
 
 ### Debian/Ubuntu
 ```bash

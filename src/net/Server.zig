@@ -6,10 +6,9 @@ const net = Io.net;
 
 const common = @import("../common.zig");
 const Client = @import("Client.zig");
-const Server = @This();
 
-const peer_ban_time: u64 = 600;
-const peer_request_delay: u64 = 60;
+const peer_ban_time = 600;
+const peer_request_delay = 60;
 
 const seed_nodes_clearnet = [_][]const u8{
     "seeds.p2pool.io",
@@ -19,6 +18,9 @@ const seed_nodes_clearnet = [_][]const u8{
 // TODO
 // Version info
 // Ban list entries
+// Make tests for everything
+
+const Server = @This();
 
 allocator: Allocator,
 io: Io,
@@ -33,18 +35,16 @@ pub const PeerInfo = struct {
 
 const ServerInfo = struct {
     /// This server's clearnet peer ID.
-    peer_id: u64,
-    /// Maximum number of incoming/outgoing peers.
-    /// Defaults are specified in the config file.
+    peer_id: ?u64 = null,
     max_peers_outgoing: u32,
     max_peers_incoming: u32,
     sidechain_type: common.SidechainType,
-    data_dir_path: ?[]const u8,
+    data_dir: Io.Dir,
 };
 
-pub fn start(self: *Server) !void {
-    const rand_io: std.Random.IoSource = .{ .io = self.io };
-    const rand: std.Random = rand_io.interface();
+pub fn run(self: *Server) !void {
+    const rand_inst: std.Random.IoSource = .{ .io = self.io };
+    const rand: std.Random = rand_inst.interface();
     self.info.peer_id = rand.int(u64);
 
     std.log.debug("Set random server ID: {d}", .{self.info.peer_id});
@@ -79,21 +79,56 @@ pub fn start(self: *Server) !void {
     }
 }
 
-fn loadPeersFromFile(self: *Server) !void {
+fn loadSavedPeers(self: *Server) !void {
+    // Saved peer lists are stored in separate files, depending on the P2Pool sidechain.
     const file_name = "p2pool_peers_" ++ @tagName(self.info.sidechain_type) ++ ".txt";
 
-    const file = try Io.Dir.cwd().createFile(self.io, file_name, .{ .read = true });
+    // Dynamically-sized array to hold IP/port slices.
+    var list: std.ArrayList([]const u8) = .empty;
+
+    // Open the peer list file in read-only mode.
+    const file = try self.info.data_dir.openFile(self.io, file_name, .{ .mode = .read_only });
     defer file.close(self.io);
 
-    var buf: [1024]u8 = undefined;
-    var w = file.writer(self.io, buf);
-    const writer = &w.interface;
+    const read_buf = try self.allocator.alloc(u8, 4096);
+    defer self.allocator.free(read_buf);
 
-    var i: usize = 0;
+    var reader_inst = file.reader(self.io, read_buf);
+    const reader = &reader_inst.interface;
 
-    for (peers) |peer| {
-        try self.peer_list.append(self.allocator, peer);
+    var line_buf: std.ArrayList(u8) = .empty;
+    defer line_buf.deinit(self.allocator);
+
+    // Read file to the end; handle EOF and newline characters.
+    // Each line is appended to the list of IP/port combinations.
+    while (true) {
+        var byte: [1]u8 = undefined;
+        const n = try reader.readSliceShort(&byte);
+
+        if (n == 0) {
+            if (line_buf.items.len > 0) {
+                const trimmed = std.mem.trim(u8, line_buf.items, " \r\n\t");
+                if (trimmed.len > 0) {
+                    const copy = try self.allocator.dupe(u8, trimmed);
+                    try list.append(copy);
+                }
+            }
+            break;
+        }
+
+        if (byte[0] == '\n') {
+            const trimmed = std.mem.trim(u8, line_buf.items, " \r\n\t");
+            if (trimmed.len > 0) {
+                const copy = try self.allocator.dupe(u8, trimmed);
+                try list.append(copy);
+            }
+            line_buf.clearRetainingCapacity();
+        } else {
+            try line_buf.append(byte[0]);
+        }
     }
+
+    return list;
 }
 
 fn handleConnection(self: *Server, stream: net.Stream) !void {
@@ -102,13 +137,13 @@ fn handleConnection(self: *Server, stream: net.Stream) !void {
     const clock: Io.Clock = .real;
     const buf_size: usize = 1024;
 
-    var write_buf: [buf_size]u8 = undefined;
-    var writer = stream.writer(self.io, write_buf);
-    const out = &writer.interface;
+    var writer_buf: [buf_size]u8 = undefined;
+    var writer_inst = stream.writer(self.io, writer_buf);
+    const writer = &writer_inst.interface;
 
-    var read_buf: [buf_size]u8 = undefined;
-    var reader = stream.reader(self.io, read_buf);
-    const in = &reader.interface;
+    var reader_buf: [buf_size]u8 = undefined;
+    var reader_inst = stream.reader(self.io, reader_buf);
+    const reader = &reader_inst.interface;
 
     var queue_buf: [buf_size]u8 = undefined;
     var recv_queue: Io.Queue(u8) = .init(queue_buf);
@@ -118,5 +153,5 @@ fn handleConnection(self: *Server, stream: net.Stream) !void {
     defer client.deinit();
     defer self.removeClient(self.io);
 
-    _ = try out.write("TEST");
+    _ = try writer.write("TEST");
 }

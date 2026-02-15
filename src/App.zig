@@ -9,6 +9,9 @@ const NodeReader = @import("net/NodeReader.zig");
 
 const App = @This();
 
+// TODO
+// Cache, mempool, sidechain, wallet, miner
+
 allocator: Allocator,
 io: Io,
 server: Server,
@@ -44,6 +47,3 @@ pub fn run(self: *App) !void {
     try self.server.run();
     try self.node_reader.run();
 }
-
-// TODO
-// Cache, mempool, sidechain, wallet, miner
