@@ -1,4 +1,5 @@
 const std = @import("std");
+const scopedLog = std.log.scoped(.server);
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
@@ -43,10 +44,16 @@ const ServerInfo = struct {
 };
 
 pub fn run(self: *Server) !void {
-    // Set peer_id to a random u64
-    Io.random(self.io, &self.info.peer_id);
+    // Initialize PRNG and obtain its interface. Uses Xoshiro256 by default.
+    const rand_inst: std.Random.IoSource = .{ .io = self.io };
+    const rand: std.Random = rand_inst.interface();
 
-    std.log.debug("Set random server ID: {d}", .{self.info.peer_id});
+    // Set peer_id to a random u64
+    self.info.peer_id = rand.int(u64);
+
+    //Io.random(self.io, &self.info.peer_id);
+
+    scopedLog.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("")});
 
     const port = @as(u16, switch (self.info.sidechain_type) {
         .main => 37889,
@@ -61,20 +68,22 @@ pub fn run(self: *Server) !void {
     var client_group: Io.Group = .init;
     defer client_group.cancel(self.io);
 
-    std.log.debug("Server listening on port {d}", .{port});
+    scopedLog.info("Listening on port {d}", .{port});
 
     while (true) {
-        std.log.debug("Attempting to accept client", .{});
+        scopedLog.debug("Attempting to accept client", .{});
         const stream = try tcp.accept(self.io);
-        std.log.debug("Accepted connection", .{});
+        scopedLog.debug("Accepted connection", .{});
 
-        var future = client_group.concurrent(self.io, handleConnection, .{
-            self.io,
+        const future = client_group.concurrent(self.io, handleConnection, .{
+            self,
             stream,
         }) catch {
-            std.log.err("Failed to start concurrent handler for connection", .{});
+            scopedLog.err("Failed to start concurrent handler for connection", .{});
             stream.close(self.io);
         };
+
+        _ = future;
     }
 }
 
@@ -137,15 +146,15 @@ fn handleConnection(self: *Server, stream: net.Stream) !void {
     const buf_size: usize = 1024;
 
     var writer_buf: [buf_size]u8 = undefined;
-    var writer_inst = stream.writer(self.io, writer_buf);
+    var writer_inst = stream.writer(self.io, &writer_buf);
     const writer = &writer_inst.interface;
 
     var reader_buf: [buf_size]u8 = undefined;
-    var reader_inst = stream.reader(self.io, reader_buf);
+    var reader_inst = stream.reader(self.io, &reader_buf);
     const reader = &reader_inst.interface;
 
     var queue_buf: [buf_size]u8 = undefined;
-    var recv_queue: Io.Queue(u8) = .init(queue_buf);
+    var recv_queue: Io.Queue(u8) = .init(&queue_buf);
     defer recv_queue.close(self.io);
 
     var client = Client.init();
@@ -153,4 +162,6 @@ fn handleConnection(self: *Server, stream: net.Stream) !void {
     defer self.removeClient(self.io);
 
     _ = try writer.write("TEST");
+    _ = reader;
+    _ = clock;
 }

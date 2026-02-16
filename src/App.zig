@@ -35,13 +35,12 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
         },
     };
 
-    self.node_reader = try NodeReader.init(config.node_ip, config.node_zmq_port);
+    self.node_reader = try NodeReader.init(allocator, io, config.node_addr, config.node_zmq_port);
 
     return self;
 }
 
 pub fn run(self: *App) !void {
-    defer self.server.deinit();
     defer self.node_reader.deinit();
 
     try self.server.run();

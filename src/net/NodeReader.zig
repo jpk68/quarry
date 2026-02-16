@@ -1,4 +1,5 @@
 const std = @import("std");
+const Config = @import("../Config.zig");
 const c = @cImport(@cInclude("zmq.h"));
 
 const Allocator = std.mem.Allocator;
@@ -11,6 +12,8 @@ const Io = std.Io;
 
 allocator: Allocator,
 io: Io,
+node_addr: []const u8,
+node_zmq_port: u16,
 zmq_ctx: *anyopaque,
 zmq_sock_sub: *anyopaque,
 zmq_sock_pub: *anyopaque,
@@ -18,7 +21,7 @@ zmq_port_pub: ?u16,
 
 const NodeReader = @This();
 
-pub fn init(allocator: Allocator, io: Io) !NodeReader {
+pub fn init(allocator: Allocator, io: Io, node_addr: []const u8, node_zmq_port: u16) !NodeReader {
     const ctx = c.zmq_ctx_new() orelse return error.CreateContextFailed;
     errdefer _ = c.zmq_ctx_destroy(ctx);
 
@@ -31,6 +34,8 @@ pub fn init(allocator: Allocator, io: Io) !NodeReader {
     return .{
         .allocator = allocator,
         .io = io,
+        .node_addr = node_addr,
+        .node_zmq_port = node_zmq_port,
         .zmq_ctx = ctx,
         .zmq_sock_sub = sock_sub,
         .zmq_sock_pub = sock_pub,
@@ -46,8 +51,8 @@ pub fn deinit(self: *NodeReader) void {
 
 pub fn run(self: *NodeReader) !void {
     // Initialize PRNG and obtain its interface. Uses Xoshiro256 by default.
-    const rand_io: std.Random.IoSource = .{ .io = self.io };
-    const rand: std.Random = rand_io.interface();
+    const rand_inst: std.Random.IoSource = .{ .io = self.io };
+    const rand: std.Random = rand_inst.interface();
 
     // Attempts to bind publisher socket to randomly generated port number.
     var i: u8 = 0;
@@ -58,7 +63,7 @@ pub fn run(self: *NodeReader) !void {
         // Formatted as a null-terminated string for C interop.
         const host = try std.fmt.bufPrintZ(&buf, "tcp://127.0.0.1:{}", .{port});
 
-        if (c.zmq_bind(self.zmq_socket_pub, host) == 0) {
+        if (c.zmq_bind(self.zmq_sock_pub, host) == 0) {
             self.zmq_port_pub = port;
         } else {
             std.log.err("Failed to bind ZMQ socket to port {d}", .{port});
@@ -66,7 +71,7 @@ pub fn run(self: *NodeReader) !void {
         }
     }
 
-    if (!self.zmq_port_pub) {
+    if (self.zmq_port_pub == null) {
         @panic("Too many failed attempts to bind port!");
     }
 
@@ -88,10 +93,18 @@ pub const ChainInfo = struct {
     block_height: u64,
 };
 
-test "create and destroy context/sockets" {
+test "init and run" {
+    var gpa = std.heap.DebugAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
     var threaded: Io.Threaded = .init_single_threaded;
     const io = threaded.io();
 
-    var node = try NodeReader.init(io);
+    const config: Config = .{};
+
+    var node = try NodeReader.init(allocator, io, config);
     defer node.deinit();
+
+    try node.run();
 }
