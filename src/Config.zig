@@ -7,6 +7,8 @@ const Io = std.Io;
 // Add config options for data_dir and node_addr
 // Use more sane defaults
 
+// The next stable Zig release will support accessing fields from imported ZON files.
+// This will be able to be replaced with a reference to ../build.zig.zon.
 const version_string: []const u8 = "0.0.0";
 
 const usage =
