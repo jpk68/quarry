@@ -1,6 +1,7 @@
 const std = @import("std");
 const common = @import("common.zig");
 
+const scopedLog = std.log.scoped(.config);
 const Io = std.Io;
 
 // TODO

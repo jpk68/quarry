@@ -20,27 +20,38 @@ const seed_nodes_clearnet = [_][]const u8{
 // Version info
 // Ban list entries
 // Make tests for everything
+// Proxy support
+// Use a less stupid allocation strategy
+// Get rid of 'orelse panic' stuff
 
 const Server = @This();
 
 allocator: Allocator,
 io: Io,
 info: ServerInfo,
-peer_list: std.SinglyLinkedList = .{},
 
-pub const PeerInfo = struct {
-    host: net.IpAddress,
-    failed_connections: u32,
-    last_seen_timestamp: u64,
-};
+client_list: std.DoublyLinkedList(*Client) = .{},
+client_lock: std.Mutex = .init,
+
+peer_list: std.ArrayList(Peer),
+peer_lock: std.Mutex = .init,
 
 const ServerInfo = struct {
     /// This server's clearnet peer ID.
     peer_id: ?u64 = null,
     max_peers_outgoing: u32,
     max_peers_incoming: u32,
+    /// The P2Pool sidechain being used.
     sidechain_type: common.SidechainType,
+    /// Directory for storing cache files.
     data_dir: Io.Dir,
+};
+
+pub const Peer = struct {
+    addr: []const u8,
+    port: u16,
+    failed_connections: u32,
+    last_seen_timestamp: u64,
 };
 
 pub fn run(self: *Server) !void {
@@ -51,40 +62,42 @@ pub fn run(self: *Server) !void {
     // Set peer_id to a random u64
     self.info.peer_id = rand.int(u64);
 
-    //Io.random(self.io, &self.info.peer_id);
-
-    scopedLog.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("")});
+    scopedLog.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("Failed to set random peer ID")});
 
     const port = @as(u16, switch (self.info.sidechain_type) {
         .main => 37889,
         .mini => 37888,
         .nano => 37890,
     });
-    const addr = try net.IpAddress.parse("127.0.0.1", port);
+    const host = try net.IpAddress.parse("127.0.0.1", port);
 
-    var tcp = try net.IpAddress.listen(addr, self.io, .{});
+    var tcp = try net.IpAddress.listen(host, self.io, .{});
     defer tcp.deinit(self.io);
+
+    scopedLog.info("Listening on port {d}", .{port});
 
     var client_group: Io.Group = .init;
     defer client_group.cancel(self.io);
 
-    scopedLog.info("Listening on port {d}", .{port});
-
     while (true) {
-        scopedLog.debug("Attempting to accept client", .{});
         const stream = try tcp.accept(self.io);
         scopedLog.debug("Accepted connection", .{});
 
-        const future = client_group.concurrent(self.io, handleConnection, .{
-            self,
-            stream,
-        }) catch {
-            scopedLog.err("Failed to start concurrent handler for connection", .{});
-            stream.close(self.io);
-        };
+        const client = try self.allocator.create(Client);
+        client.* = try Client.init(self, stream, self.io, self.allocator);
 
-        _ = future;
+        try self.client_lock.lock(self.io);
+        self.client_list.append(client);
+        self.client_lock.unlock(self.io);
+
+        _ = try client_group.concurrent(self.io, Client.run, .{ client, self.io });
     }
+}
+
+fn registerPeer(self: *Server, peer: Peer) !void {
+    try self.peer_lock.lock(self.io);
+    defer self.peer_lock.unlock(self.io);
+    try self.peer_list.append(self.allocator, peer);
 }
 
 fn loadSavedPeers(self: *Server) !void {

@@ -1,7 +1,9 @@
 const std = @import("std");
+const common = @import("../common.zig");
 const Config = @import("../Config.zig");
 const c = @cImport(@cInclude("zmq.h"));
 
+const scopedLog = std.log.scoped(.node_reader);
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
@@ -88,9 +90,15 @@ pub fn run(self: *NodeReader) !void {
     }
 }
 
-pub const ChainInfo = struct {
-    minor_version: u8,
+pub const ChainData = struct {
+    major_version: u8,
     block_height: u64,
+    previous_id: common.Hash,
+    seed_hash: common.Hash,
+    difficulty: u128,
+    median_weight: u64,
+    already_generated_coins: u64,
+    median_timestamp: u64,
 };
 
 test "init and run" {
