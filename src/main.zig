@@ -1,10 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const Io = std.Io;
-
 const Config = @import("Config.zig");
 const App = @import("App.zig");
+
+const Io = std.Io;
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;

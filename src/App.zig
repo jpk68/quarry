@@ -1,4 +1,5 @@
 const std = @import("std");
+const scopedLog = std.log.scoped(.app);
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
@@ -18,6 +19,8 @@ server: Server,
 node_reader: NodeReader,
 
 pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
+    scopedLog.debug("Initializing App", .{});
+
     const self = try allocator.create(App);
     errdefer allocator.destroy(self);
 
