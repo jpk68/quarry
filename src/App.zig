@@ -1,17 +1,17 @@
 const std = @import("std");
-const scopedLog = std.log.scoped(.app);
-
-const Allocator = std.mem.Allocator;
-const Io = std.Io;
 
 const Config = @import("Config.zig");
 const Server = @import("net/Server.zig");
 const NodeReader = @import("net/NodeReader.zig");
 
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
+
 const App = @This();
 
 // TODO
 // Init cache, mempool, sidechain, wallet, miner/hasher
+// Init with allocator instead
 
 allocator: Allocator,
 io: Io,
@@ -19,8 +19,6 @@ server: Server,
 node_reader: NodeReader,
 
 pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
-    scopedLog.debug("Initializing App", .{});
-
     const self = try allocator.create(App);
     errdefer allocator.destroy(self);
 

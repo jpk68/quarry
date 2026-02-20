@@ -1,8 +1,8 @@
 const std = @import("std");
 const common = @import("common.zig");
 
-const scopedLog = std.log.scoped(.config);
 const Io = std.Io;
+const log = std.log.scoped(.config);
 
 // TODO
 // Add config options for data_dir and node_addr
@@ -45,7 +45,7 @@ max_peers_incoming: u32 = 450,
 
 data_dir: Io.Dir = Io.Dir.cwd(),
 
-pub fn init(io: Io, args: std.process.Args) !Config {
+pub fn parseArgs(io: Io, args: std.process.Args) !Config {
     var result: Config = .{};
 
     // Get iterator and throw away first arg (program name)

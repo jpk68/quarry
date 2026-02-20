@@ -5,7 +5,7 @@ const Keccak = std.crypto.sha3.Keccak256;
 const Hash = common.Hash;
 const hash_size = common.hash_size;
 
-const challenge_size = 8;
+const challenge_size: usize = 8;
 const challenge_difficulty = 1000;
 
 const Challenge = [challenge_size]u8;

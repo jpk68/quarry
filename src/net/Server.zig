@@ -1,12 +1,12 @@
 const std = @import("std");
-const scopedLog = std.log.scoped(.server);
+
+const common = @import("../common.zig");
+const Client = @import("Client.zig");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 const net = Io.net;
-
-const common = @import("../common.zig");
-const Client = @import("Client.zig");
+const log = std.log.scoped(.server);
 
 const peer_ban_time = 600;
 const peer_request_delay = 60;
@@ -62,7 +62,7 @@ pub fn run(self: *Server) !void {
     // Set peer_id to a random u64
     self.info.peer_id = rand.int(u64);
 
-    scopedLog.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("Failed to set random peer ID")});
+    log.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("Failed to set random peer ID")});
 
     const port = @as(u16, switch (self.info.sidechain_type) {
         .main => 37889,
@@ -74,14 +74,14 @@ pub fn run(self: *Server) !void {
     var tcp = try net.IpAddress.listen(host, self.io, .{});
     defer tcp.deinit(self.io);
 
-    scopedLog.info("Listening on port {d}", .{port});
+    log.info("Listening on port {d}", .{port});
 
     var client_group: Io.Group = .init;
     defer client_group.cancel(self.io);
 
     while (true) {
         const stream = try tcp.accept(self.io);
-        scopedLog.debug("Accepted connection", .{});
+        log.debug("Accepted connection", .{});
 
         const client = try self.allocator.create(Client);
         client.* = try Client.init(self, stream, self.io, self.allocator);

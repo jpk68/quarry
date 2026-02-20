@@ -1,9 +1,10 @@
 const std = @import("std");
-const common = @import("../common.zig");
-const Config = @import("../Config.zig");
 const c = @cImport(@cInclude("zmq.h"));
 
-const scopedLog = std.log.scoped(.node_reader);
+const common = @import("../common.zig");
+const Config = @import("../Config.zig");
+
+const log = std.log.scoped(.node_reader);
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
@@ -23,14 +24,14 @@ zmq_port_pub: ?u16,
 
 const NodeReader = @This();
 
-pub fn init(allocator: Allocator, io: Io, node_addr: []const u8, node_zmq_port: u16) !NodeReader {
-    const ctx = c.zmq_ctx_new() orelse return error.CreateContextFailed;
+pub fn init(allocator: Allocator, io: Io, node_addr: []const u8, node_zmq_port: u16) NodeReaderError!NodeReader {
+    const ctx = c.zmq_ctx_new() orelse return NodeReaderError.CreateContextFailed;
     errdefer _ = c.zmq_ctx_destroy(ctx);
 
-    const sock_sub = c.zmq_socket(ctx, c.ZMQ_SUB) orelse return error.CreateSocketFailed;
+    const sock_sub = c.zmq_socket(ctx, c.ZMQ_SUB) orelse return NodeReaderError.CreateSocketFailed;
     errdefer _ = c.zmq_close(sock_sub);
 
-    const sock_pub = c.zmq_socket(ctx, c.ZMQ_PUB) orelse return error.CreateSocketFailed;
+    const sock_pub = c.zmq_socket(ctx, c.ZMQ_PUB) orelse return NodeReaderError.CreateSocketFailed;
     errdefer _ = c.zmq_close(sock_pub);
 
     return .{
@@ -86,7 +87,7 @@ pub fn run(self: *NodeReader) !void {
         &timeout_ms,
         @sizeOf(@TypeOf(timeout_ms)),
     ) != 0) {
-        return error.SetSockOptionsFailed;
+        return NodeReaderError.SetSockOptionsFailed;
     }
 }
 
@@ -99,6 +100,12 @@ pub const ChainData = struct {
     median_weight: u64,
     already_generated_coins: u64,
     median_timestamp: u64,
+};
+
+const NodeReaderError = error{
+    CreateContextFailed,
+    CreateSocketFailed,
+    SetSockOptionsFailed,
 };
 
 test "init and run" {
