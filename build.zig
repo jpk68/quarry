@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
+    // Use default per-platform target and optimization options
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -10,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const exe = b.addExecutable(.{
+    const quarry = b.addExecutable(.{
         .name = "quarry",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
@@ -25,37 +26,27 @@ pub fn build(b: *std.Build) void {
         // Zig's self-hosted backend currently has some issues with C interop
         .use_llvm = true,
     });
-
-    exe.root_module.linkSystemLibrary("libzmq", .{});
-
-    b.installArtifact(exe);
+    quarry.root_module.linkSystemLibrary("libzmq", .{});
+    b.installArtifact(quarry);
 
     const run_step = b.step("run", "Run the app");
-
-    const run_cmd = b.addRunArtifact(exe);
+    const run_cmd = b.addRunArtifact(quarry);
     run_step.dependOn(&run_cmd.step);
-
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
-    const randomx_tests = b.addTest(.{
-        .root_module = randomx,
-    });
-
+    const randomx_tests = b.addTest(.{ .root_module = randomx });
     const run_randomx_tests = b.addRunArtifact(randomx_tests);
 
-    const exe_tests = b.addTest(.{
-        .root_module = exe.root_module,
-    });
-
-    const run_exe_tests = b.addRunArtifact(exe_tests);
+    const quarry_tests = b.addTest(.{ .root_module = quarry.root_module });
+    const run_quarry_tests = b.addRunArtifact(quarry_tests);
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_randomx_tests.step);
-    test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_quarry_tests.step);
 
     // Custom directive to format and check source files
     const fmt = b.addFmt(.{
