@@ -24,7 +24,7 @@ sudo pacman -S zeromq --needed
 ```bash
 git clone https://codeberg.org/jpk68/quarry
 cd quarry
-zig build --release=fast
+zig build
 ```
 
-The above instructions will compile for the `fast` release mode. See [this page](https://zig.guide/build-system/build-modes/) for more information.
+The above instructions will compile for the `debug` release mode. See [this page](https://zig.guide/build-system/build-modes/) for more information.
