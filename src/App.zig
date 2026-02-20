@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const Config = @import("Config.zig");
 const Server = @import("net/Server.zig");
 const NodeReader = @import("net/NodeReader.zig");
@@ -10,8 +9,8 @@ const Io = std.Io;
 const App = @This();
 
 // TODO
-// Init cache, mempool, sidechain, wallet, miner/hasher
-// Init with allocator instead
+// Set up cache, mempool, sidechain, wallet, miner
+// Use allocator to init stuff
 
 allocator: Allocator,
 io: Io,
@@ -19,7 +18,7 @@ server: Server,
 node_reader: NodeReader,
 
 pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
-    const self = try allocator.create(App);
+    var self = try allocator.create(App);
     errdefer allocator.destroy(self);
 
     self.allocator = allocator;
@@ -39,6 +38,10 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
     self.node_reader = try NodeReader.init(allocator, io, config.node_addr, config.node_zmq_port);
 
     return self;
+}
+
+pub fn deinit(self: *App) void {
+    self.allocator.destroy(self);
 }
 
 pub fn run(self: *App) !void {
