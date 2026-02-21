@@ -25,13 +25,13 @@ zmq_port_pub: ?u16,
 const NodeReader = @This();
 
 pub fn init(allocator: Allocator, io: Io, node_addr: []const u8, node_zmq_port: u16) NodeReaderError!NodeReader {
-    const ctx = c.zmq_ctx_new() orelse return NodeReaderError.CreateContextFailed;
+    const ctx = c.zmq_ctx_new() orelse return .CreateContextFailed;
     errdefer _ = c.zmq_ctx_destroy(ctx);
 
-    const sock_sub = c.zmq_socket(ctx, c.ZMQ_SUB) orelse return NodeReaderError.CreateSocketFailed;
+    const sock_sub = c.zmq_socket(ctx, c.ZMQ_SUB) orelse return .CreateSocketFailed;
     errdefer _ = c.zmq_close(sock_sub);
 
-    const sock_pub = c.zmq_socket(ctx, c.ZMQ_PUB) orelse return NodeReaderError.CreateSocketFailed;
+    const sock_pub = c.zmq_socket(ctx, c.ZMQ_PUB) orelse return .CreateSocketFailed;
     errdefer _ = c.zmq_close(sock_pub);
 
     return .{
@@ -52,7 +52,7 @@ pub fn deinit(self: *NodeReader) void {
     _ = c.zmq_ctx_destroy(self.zmq_ctx);
 }
 
-pub fn run(self: *NodeReader) !void {
+pub fn run(self: *NodeReader) NodeReaderError!void {
     // Initialize PRNG and obtain its interface. Uses Xoshiro256 by default.
     const rand_inst: std.Random.IoSource = .{ .io = self.io };
     const rand: std.Random = rand_inst.interface();
@@ -87,7 +87,7 @@ pub fn run(self: *NodeReader) !void {
         &timeout_ms,
         @sizeOf(@TypeOf(timeout_ms)),
     ) != 0) {
-        return NodeReaderError.SetSockOptionsFailed;
+        return .SetSockOptionsFailed;
     }
 }
 
