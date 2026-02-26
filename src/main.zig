@@ -27,7 +27,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const io = io_inst.io();
 
     log.debug("Attempting to set config options from args", .{});
-    var config = try Config.initFromArgs(io, init.args);
+    var config = try Config.initFromArgs(init.args);
 
     log.debug("Attempting to create and run app", .{});
     const app = try App.init(allocator, io, &config);

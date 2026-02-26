@@ -19,7 +19,7 @@ max_peers_outgoing: u32 = 10,
 max_peers_incoming: u32 = 450,
 data_dir: Io.Dir = Io.Dir.cwd(),
 
-pub fn initFromArgs(io: Io, args: std.process.Args) !Config {
+pub fn initFromArgs(args: std.process.Args) !Config {
     var result: Config = .{};
 
     // Get iterator and throw away first argument (executable name)
