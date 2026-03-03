@@ -1,21 +1,42 @@
 const std = @import("std");
+
+const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
-pub const BlockCache = struct {
-    io: Io,
-    file: ?Io.File,
-    file_size: ?usize,
+const block_size: u64 = 96 * 1024;
+const block_count: u64 = 4608;
+const cache_size: u64 = block_size * block_count;
 
-    pub fn init(io: Io, dir: Io.Dir) !BlockCache {
-        return .{
-            .io = io,
-            .file = null,
-            .file_size = null,
+const cache_file_name: []const u8 = "p2pool_cache.bin";
+
+pub const BlockCache = struct {
+    allocator: Allocator,
+    io: Io,
+
+    file: Io.File,
+    map: Io.File.MemoryMap,
+
+    pub fn init(allocator: Allocator, io: Io, dir: Io.Dir) !BlockCache {
+        const self = try allocator.create(BlockCache);
+        errdefer allocator.destroy(self);
+
+        self.allocator = allocator;
+        self.io = io;
+
+        self.file = try dir.openFile(self.io, cache_file_name, .{ .mode = .read_write }) catch |err| switch (err) {
+            .FileNotFound => try dir.createFile(self.io, cache_file_name, .{ .read = true }),
+            else => return err,
         };
+        errdefer self.file.close(self.io);
+
+        self.map = try self.file.createMemoryMap(self.io, .{ .len = cache_size });
+        errdefer self.map.close(self.io);
     }
 
-    pub fn saveData(self: *BlockCache, data: []const u8) !void {
-        try self.file.writeAll(self.io, data);
-        std.log.debug("Finished writing data to cache file", .{});
+    pub fn deinit(self: *BlockCache) void {
+        defer self.allocator.destroy(self);
+
+        self.map.close(self.io);
+        self.file.close(self.io);
     }
 };
