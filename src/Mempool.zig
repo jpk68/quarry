@@ -1,6 +1,8 @@
 const std = @import("std");
 const common = @import("common.zig");
 
+const Mempool = @This();
+
 // Base block reward is constant after reaching tail emission.
 const base_reward: u64 = 600000000000;
 
@@ -11,8 +13,11 @@ pub const Entry = struct {
     blob_size: usize,
     weight: u64,
     fee: u64,
-    received_timestamp: u64,
+    time_received: u64,
 };
+
+// TODO
+// Sort and pick functions
 
 pub fn getBlockReward(weight: u64, median_weight: u64, fees: u64) u64 {
     // No penalty incurred if block weight is smaller than the median weight.

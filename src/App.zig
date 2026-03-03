@@ -1,16 +1,17 @@
 const std = @import("std");
-const Config = @import("Config.zig");
-const Server = @import("net/Server.zig");
-const NodeReader = @import("net/NodeReader.zig");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
 
+const Config = @import("Config.zig");
+const Server = @import("net/Server.zig");
+const NodeReader = @import("net/NodeReader.zig");
+
 const App = @This();
 
 // TODO
-// Set up cache, mempool, sidechain, wallet, miner
-// Use allocator to init stuff
+// Set up other components here
+// Use the heap to init stuff
 
 allocator: Allocator,
 io: Io,
@@ -36,7 +37,6 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
     };
 
     self.node_reader = try NodeReader.init(allocator, io, config.node_addr, config.node_zmq_port);
-
     return self;
 }
 

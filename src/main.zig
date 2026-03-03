@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 const Config = @import("Config.zig");
 const App = @import("App.zig");
 
@@ -8,6 +9,7 @@ const log = std.log.scoped(.main);
 
 // TODO
 // Use custom log function with std.Options
+// Add some dependency (or use libc) to get date/time
 
 pub fn main(init: std.process.Init.Minimal) !void {
     // DebugAllocator is used in Debug mode to detect memory leaks.
