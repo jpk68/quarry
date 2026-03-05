@@ -1,5 +1,7 @@
-const superscalar_latency = @import("common.zig").superscalar_latency;
+const superscalar_latency = 170;
 const buf_size = 3 * superscalar_latency + 2;
+
+pub const superscalar_mul_0: u64 = 6364136223846793005;
 
 pub const SuperscalarProgram = struct {
     program_buf: [buf_size]SuperscalarInstruction,

@@ -11,7 +11,7 @@ const log = std.log.scoped(.server);
 const peer_ban_time = 600;
 const peer_request_delay = 60;
 
-const seed_nodes_clearnet = [_][]const u8{
+const seed_nodes_clearnet = [][]const u8{
     "seeds.p2pool.io",
     "main.p2poolpeers.net",
 };
@@ -38,7 +38,7 @@ peer_lock: std.Mutex = .init,
 
 const ServerInfo = struct {
     /// This server's clearnet peer ID.
-    peer_id: ?u64 = null,
+    peer_id: u64 = undefined,
     max_peers_outgoing: u32,
     max_peers_incoming: u32,
     /// The P2Pool sidechain being used.
@@ -62,7 +62,7 @@ pub fn run(self: *Server) !void {
     // Set peer_id to a random u64
     self.info.peer_id = rand.int(u64);
 
-    log.debug("Set random server ID: {d}", .{self.info.peer_id orelse @panic("Failed to set random peer ID")});
+    log.debug("Set random server ID: {d}", .{self.info.peer_id});
 
     const port = @as(u16, switch (self.info.sidechain_type) {
         .main => 37889,
@@ -81,16 +81,11 @@ pub fn run(self: *Server) !void {
 
     while (true) {
         const stream = try tcp.accept(self.io);
+        errdefer stream.close(self.io);
+
         log.debug("Accepted connection", .{});
 
-        const client = try self.allocator.create(Client);
-        client.* = try Client.init(self, stream, self.io, self.allocator);
-
-        try self.client_lock.lock(self.io);
-        self.client_list.append(client);
-        self.client_lock.unlock(self.io);
-
-        _ = try client_group.concurrent(self.io, Client.run, .{ client, self.io });
+        try client_group.concurrent(self.io, handleClient, .{ self.io, stream });
     }
 }
 
