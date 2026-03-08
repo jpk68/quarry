@@ -1,6 +1,6 @@
 # Quarry
 
-High-performance software for mining Monero with P2Pool. Highly work-in-progress.
+High-performance software for mining Monero. Highly work-in-progress.
 
 ## Status
 
