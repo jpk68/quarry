@@ -9,6 +9,7 @@ pub fn build(b: *std.Build) void {
     const randomx = b.addModule("randomx", .{
         .root_source_file = b.path("src/randomx/root.zig"),
         .target = target,
+        .optimize = optimize,
     });
 
     const quarry = b.addExecutable(.{
@@ -23,8 +24,6 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "randomx", .module = randomx },
             },
         }),
-        // Zig's self-hosted backend currently has some issues with C interop
-        .use_llvm = true,
     });
     quarry.root_module.linkSystemLibrary("libzmq", .{});
     b.installArtifact(quarry);

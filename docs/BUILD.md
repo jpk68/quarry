@@ -1,7 +1,7 @@
 # Build instructions
 
 > [!WARNING]
-> This software is largely a work-in-progress; builds will likely fail at this time.
+> This software is largely a work-in-progress; builds may fail at this time.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ sudo pacman -S zeromq --needed
 ```bash
 git clone https://codeberg.org/jpk68/quarry
 cd quarry
-zig build
+make
 ```
 
 The above instructions will compile for the `debug` release mode. See [this page](https://zig.guide/build-system/build-modes/) for more information.

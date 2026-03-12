@@ -9,8 +9,8 @@ const Config = @This();
 // TODO
 // Add config options for node_addr and data_dir
 
-network: common.NetworkType = .mainnet,
-sidechain: common.SidechainType = .main,
+network_type: common.NetworkType = .mainnet,
+sidechain_type: common.SidechainType = .main,
 node_addr: []const u8 = "127.0.0.1",
 node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
@@ -127,6 +127,6 @@ fn exitHelp() noreturn {
 }
 
 fn exitVersion() noreturn {
-    std.debug.print("Quarry {s}\n", .{version_string});
+    std.debug.print("Quarry v{s}\n", .{version_string});
     std.process.exit(0);
 }

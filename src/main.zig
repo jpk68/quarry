@@ -8,8 +8,8 @@ const Io = std.Io;
 const log = std.log.scoped(.main);
 
 // TODO
-// Use custom log function with std.Options
-// Add some dependency (or use libc) to get date/time
+// Use a custom log function with std.Options
+// Use some dependency (or use libc) to get date/time
 
 pub fn main(init: std.process.Init.Minimal) !void {
     // DebugAllocator is used in Debug mode to detect memory leaks.
@@ -28,10 +28,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer io_inst.deinit();
     const io = io_inst.io();
 
-    log.debug("Attempting to set config options from args", .{});
+    log.debug("Loading config from args", .{});
     var config = try Config.initFromArgs(init.args);
 
-    log.debug("Attempting to create and run app", .{});
+    log.debug("Creating and running app", .{});
     const app = try App.init(allocator, io, &config);
 
     return app.run();

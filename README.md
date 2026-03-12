@@ -1,6 +1,6 @@
 # Quarry
 
-High-performance software for mining Monero. Highly work-in-progress.
+High-performance software (hopefully) for mining Monero. Highly work-in-progress.
 
 ## Status
 

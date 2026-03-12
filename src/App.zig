@@ -2,41 +2,29 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
+const log = std.log.scoped(.app);
 
 const Config = @import("Config.zig");
-const Server = @import("net/Server.zig");
-const NodeReader = @import("net/NodeReader.zig");
+const Server = @import("net/server.zig").Server;
 
 const App = @This();
 
-// TODO
-// Set up other components here
-// Use the heap to init stuff
-
 allocator: Allocator,
 io: Io,
-server: Server,
-node_reader: NodeReader,
+
+config: *Config,
+server: *Server,
 
 pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
-    var self = try allocator.create(App);
+    const self = try allocator.create(App);
     errdefer allocator.destroy(self);
 
-    self.allocator = allocator;
-    self.io = io;
-
-    self.server = Server{
+    self.* = .{
         .allocator = allocator,
         .io = io,
-        .info = .{
-            .max_peers_outgoing = config.max_peers_outgoing,
-            .max_peers_incoming = config.max_peers_incoming,
-            .sidechain_type = config.sidechain_type,
-            .data_dir = config.data_dir,
-        },
+        .config = config,
+        .server = try Server.init(allocator, io),
     };
-
-    self.node_reader = try NodeReader.init(allocator, io, config.node_addr, config.node_zmq_port);
     return self;
 }
 
@@ -45,8 +33,12 @@ pub fn deinit(self: *App) void {
 }
 
 pub fn run(self: *App) !void {
-    defer self.node_reader.deinit();
+    switch (self.config.network_type) {
+        .testnet, .stagenet => |t| {
+            log.warn("Running on {s}, coins aren't worth anything!", .{@tagName(t)});
+        },
+        else => {},
+    }
 
-    try self.server.run();
-    try self.node_reader.run();
+    try self.server.start();
 }
