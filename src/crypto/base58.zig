@@ -19,8 +19,8 @@ const reverse_alphabet = blk: {
 };
 
 /// Encodes an arbitrary-length slice into Base58.
-fn encode(allocator: Allocator, input: []const u8) ![]const u8 {
-    if (input.len == 0) return Base58Error.InvalidInput;
+fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
+    if (input.len == 0) return error.InvalidInput;
 
     const full_blocks_count = input.len / full_block_size;
     const last_block_size = input.len % full_block_size;
@@ -54,8 +54,8 @@ fn encode(allocator: Allocator, input: []const u8) ![]const u8 {
     return output;
 }
 
-fn encodeBlock(input: []const u8, block_size: usize, output: []u8) !void {
-    if (block_size == 0 or input.len > full_block_size) return Base58Error.InvalidBlockSize;
+fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!void {
+    if (block_size == 0 or input.len > full_block_size) return error.InvalidBlockSize;
 
     var num: u64 = 0;
     for (input) |b| {
@@ -73,8 +73,8 @@ fn encodeBlock(input: []const u8, block_size: usize, output: []u8) !void {
 }
 
 /// Decodes an arbitrary-length Base58 slice.
-fn decode(allocator: Allocator, input: []const u8) ![]const u8 {
-    if (input.len == 0) return Base58Error.InvalidInput;
+fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
+    if (input.len == 0) return error.InvalidInput;
 
     const full_blocks_count = input.len / full_encoded_block_size;
     const last_block_size = input.len % full_encoded_block_size;
@@ -85,7 +85,7 @@ fn decode(allocator: Allocator, input: []const u8) ![]const u8 {
         else if (last_block_size < encoded_block_sizes.len and encoded_block_sizes[last_block_size] != 0)
             encoded_block_sizes[last_block_size]
         else
-            return Base58Error.InvalidLength;
+            return error.InvalidLength;
 
     const output_size = full_blocks_count * full_block_size + last_block_decoded_size;
 
@@ -115,13 +115,13 @@ fn decode(allocator: Allocator, input: []const u8) ![]const u8 {
     return output;
 }
 
-fn decodeBlock(input: []const u8, block_size: usize, output: []u8) !void {
-    if (block_size == 0 or block_size > full_encoded_block_size) return Base58Error.InvalidInput;
+fn decodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!void {
+    if (block_size == 0 or block_size > full_encoded_block_size) return error.InvalidInput;
 
     const decoded_size =
         if (block_size < encoded_block_sizes.len) encoded_block_sizes[block_size] else 0;
 
-    if (decoded_size == 0) return Base58Error.InvalidLength;
+    if (decoded_size == 0) return error.InvalidLength;
 
     var num: u64 = 0;
     var order: u64 = 1;
@@ -133,17 +133,17 @@ fn decodeBlock(input: []const u8, block_size: usize, output: []u8) !void {
 
         const digit = reverse_alphabet[char];
         if (digit < 0) {
-            return Base58Error.InvalidCharacter;
+            return error.InvalidCharacter;
         }
 
         const product = @mulWithOverflow(order, @as(u64, @intCast(digit)));
         if (product[1] != 0) {
-            return Base58Error.Overflow;
+            return error.Overflow;
         }
 
         const sum = @addWithOverflow(num, product[0]);
         if (sum[1] != 0) {
-            return Base58Error.Overflow;
+            return error.Overflow;
         }
 
         num = sum[0];
@@ -151,7 +151,7 @@ fn decodeBlock(input: []const u8, block_size: usize, output: []u8) !void {
     }
 
     if (decoded_size < full_block_size) {
-        if (num >= (@as(u64, 1) << @as(u6, @intCast(decoded_size * 8)))) return Base58Error.Overflow;
+        if (num >= (@as(u64, 1) << @as(u6, @intCast(decoded_size * 8)))) return error.Overflow;
     }
 
     var tmp = num;
@@ -169,7 +169,7 @@ const Base58Error = error{
     InvalidLength,
     InvalidCharacter,
     Overflow,
-};
+} || Allocator.Error;
 
 test "constant sizes" {
     try testing.expectEqual(full_block_size, 8);
