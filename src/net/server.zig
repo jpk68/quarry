@@ -7,16 +7,27 @@ const net = std.Io.net;
 const log = std.log.scoped(.server);
 
 const PeerInfo = struct {
-    host: Io.net.IpAddress,
+    host: net.IpAddress,
     failed_connection_count: usize,
     last_seen_timestamp: u64,
 };
 
-fn dummyTask() void {
-    log.info("Processing dummy task", .{});
+const BanInfo = struct {
+    expiration_timestamp: u64,
+};
 
-    var ts = std.posix.timespec{ .sec = 0, .nsec = 500_000_000 };
-    _ = std.posix.system.nanosleep(&ts, &ts);
+fn handlePeer(self: *Server, stream: net.Stream) void {
+    log.info("Accepted connection from {}", .{stream.socket.address});
+
+    const entry = PeerInfo{
+        .host = stream.socket.address,
+        .failed_connection_count = 0,
+        .last_seen_timestamp = 0,
+    };
+
+    self.peer_list.append(self.allocator, entry) catch {};
+
+    log.debug("Current peer list: {}", .{self.peer_list});
 }
 
 pub const Server = struct {
@@ -25,6 +36,8 @@ pub const Server = struct {
 
     peer_id: u64,
     num_connections: usize,
+    peer_list: std.ArrayList(PeerInfo) = .empty,
+    ban_list: std.ArrayList(BanInfo) = .empty,
 
     pub fn init(allocator: Allocator, io: Io) !*Server {
         const self = try allocator.create(Server);
@@ -70,7 +83,7 @@ pub const Server = struct {
 
             log.info("Accepted connection", .{});
 
-            try group.concurrent(self.io, dummyTask, .{});
+            try group.concurrent(self.io, handlePeer, .{ self, stream });
         }
     }
 };

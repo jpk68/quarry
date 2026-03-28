@@ -8,6 +8,7 @@ const Config = @This();
 
 // TODO
 // Add config options for node_addr and data_dir
+// Refactor this whole thing because it sucks
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
