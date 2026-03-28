@@ -1,5 +1,9 @@
 const std = @import("std");
 
+// TODO
+// Add release targets
+// Replace Makefile with native options
+
 pub fn build(b: *std.Build) void {
     // Use default per-platform target and optimization options
     const target = b.standardTargetOptions(.{});
