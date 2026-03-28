@@ -69,7 +69,7 @@ pub const Server = struct {
         const port: u16 = 7777;
         const host = try net.IpAddress.parse("127.0.0.1", port);
 
-        var tcp = try net.IpAddress.listen(host, self.io, .{});
+        var tcp = try net.IpAddress.listen(&host, self.io, .{});
         defer tcp.deinit(self.io);
 
         log.info("Listening on port {}", .{port});
