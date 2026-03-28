@@ -1,4 +1,7 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const build = @import("build.zig.zon");
 const common = @import("common.zig");
 
 const Io = std.Io;
@@ -101,9 +104,6 @@ pub fn initFromArgs(args: std.process.Args) !Config {
     return result;
 }
 
-// This will be replaced with the build script's version number after the next Zig release.
-const version_string: []const u8 = "0.0.0";
-
 fn exitHelp() noreturn {
     std.debug.print(
         \\Usage: quarry [options]
@@ -128,6 +128,8 @@ fn exitHelp() noreturn {
 }
 
 fn exitVersion() noreturn {
-    std.debug.print("Quarry v{s}\n", .{version_string});
+    std.debug.print("Quarry v{s}\n", .{build.version});
+    if (builtin.mode == .Debug) std.debug.print("{s}\n", .{build.minimum_zig_version});
+
     std.process.exit(0);
 }

@@ -5,6 +5,13 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Embed the build.zig.zon file to access version info
+    const build_zig_zon = b.createModule(.{
+        .root_source_file = b.path("build.zig.zon"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     // RandomX is compiled as a separate unit
     const randomx = b.addModule("randomx", .{
         .root_source_file = b.path("src/randomx/root.zig"),
@@ -22,6 +29,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
             .imports = &.{
                 .{ .name = "randomx", .module = randomx },
+                .{ .name = "build.zig.zon", .module = build_zig_zon },
             },
         }),
     });
