@@ -93,10 +93,11 @@ pub fn run(self: *NodeReader) NodeReaderError!void {
 
 pub const ChainData = struct {
     major_version: u8,
+    minor_version: u8,
     block_height: u64,
     previous_id: common.Hash,
     seed_hash: common.Hash,
-    difficulty: u128,
+    difficulty: common.Difficulty,
     median_weight: u64,
     already_generated_coins: u64,
     median_timestamp: u64,
