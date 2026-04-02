@@ -2,12 +2,15 @@ const std = @import("std");
 
 // TODO
 // Add release targets
-// Replace Makefile with native options
 
 pub fn build(b: *std.Build) void {
     // Use default per-platform target and optimization options
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    // Define custom build options/directives
+    const use_llvm = b.option(bool, "use-llvm", "Use LLVM backend for Zig codegen");
+    const fmt_check = b.option(bool, "fmt-check", "Check formatting of source files");
 
     // Embed the build.zig.zon file to access version info
     const build_zig_zon = b.createModule(.{
@@ -36,6 +39,8 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "build.zig.zon", .module = build_zig_zon },
             },
         }),
+        .use_llvm = use_llvm,
+        .use_lld = use_llvm,
     });
     quarry.root_module.linkSystemLibrary("libzmq", .{});
     b.installArtifact(quarry);
@@ -59,14 +64,14 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_randomx_tests.step);
     test_step.dependOn(&run_quarry_tests.step);
 
-    // Custom directive to format and check source files
+    // Custom directive to check and format source files
     const fmt = b.addFmt(.{
-        .check = b.option(bool, "fmtcheck", "fmtcheck") orelse false,
+        .check = fmt_check orelse true,
         .paths = &.{
             "src",
             "build.zig",
             "build.zig.zon",
         },
     });
-    b.step("fmt", "Format source files").dependOn(&fmt.step);
+    b.step("fmt", "Check and format source files").dependOn(&fmt.step);
 }
