@@ -22,7 +22,7 @@ const reverse_alphabet = blk: {
 fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     if (input.len == 0) return error.InvalidInput;
 
-    const full_blocks_count = input.len / full_block_size;
+    const full_blocks_count = @divFloor(input.len, full_block_size);
     const last_block_size = input.len % full_block_size;
     const output_size = full_blocks_count * full_encoded_block_size + encoded_block_sizes[last_block_size];
 
@@ -76,7 +76,7 @@ fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
 fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     if (input.len == 0) return error.InvalidInput;
 
-    const full_blocks_count = input.len / full_encoded_block_size;
+    const full_blocks_count = @divFloor(input.len, full_encoded_block_size);
     const last_block_size = input.len % full_encoded_block_size;
 
     const last_block_decoded_size =
