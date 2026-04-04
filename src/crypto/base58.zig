@@ -27,6 +27,7 @@ fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     const output_size = full_blocks_count * full_encoded_block_size + encoded_block_sizes[last_block_size];
 
     var output = try allocator.alloc(u8, output_size);
+    errdefer allocator.free(output);
     // Fill output buffer with `1`s for padding
     @memset(output, alphabet[0]);
 
@@ -90,6 +91,7 @@ fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     const output_size = full_blocks_count * full_block_size + last_block_decoded_size;
 
     var output = try allocator.alloc(u8, output_size);
+    errdefer allocator.free(output);
 
     var in_index: usize = 0;
     var out_index: usize = 0;
@@ -183,16 +185,18 @@ test "constant types" {
 }
 
 test "decode address" {
-    const allocator = std.heap.page_allocator;
+    const allocator = std.testing.allocator;
     const address = "4B33mFPMq6mKi7Eiyd5XuyKRVMGVZz1Rqb9ZTyGApXW5d1aT7UBDZ89ewmnWFkzJ5wPd2SFbn313vCT8a4E2Qf4KQH4pNey";
 
     // Not sure why this fails :((
     const result = try decode(allocator, address);
+    defer allocator.free(result);
+
     std.debug.print("Result: {any}\n", .{result});
 }
 
 test "encode address" {
-    const allocator = std.heap.page_allocator;
+    const allocator = std.testing.allocator;
 
     // https://github.com/monero-oxide/monero-oxide/blob/main/monero-oxide/wallet/address/src/tests.rs#L13
     // https://xmr.llcoins.net/addresstests.html
@@ -203,5 +207,7 @@ test "encode address" {
     const bytes = try std.fmt.hexToBytes(&buf, hex);
 
     const result = try encode(allocator, bytes);
+    defer allocator.free(result);
+
     try testing.expect(std.mem.eql(u8, result, ascii));
 }
