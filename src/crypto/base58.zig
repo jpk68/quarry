@@ -24,7 +24,8 @@ fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
 
     const full_blocks_count = @divFloor(input.len, full_block_size);
     const last_block_size = input.len % full_block_size;
-    const output_size = full_blocks_count * full_encoded_block_size + encoded_block_sizes[last_block_size];
+    const output_size =
+        full_encoded_block_size * full_blocks_count + encoded_block_sizes[last_block_size];
 
     var output = try allocator.alloc(u8, output_size);
     errdefer allocator.free(output);
@@ -64,12 +65,11 @@ fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
     }
 
     var i: isize = @intCast(encoded_block_sizes[block_size] - 1);
-    while (num > 0) {
+    while (num > 0) : (i -= 1) {
         const rem = num % alphabet.len;
         num /= alphabet.len;
 
         output[@intCast(i)] = alphabet[@intCast(rem)];
-        i -= 1;
     }
 }
 
@@ -79,16 +79,7 @@ fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
 
     const full_blocks_count = @divFloor(input.len, full_encoded_block_size);
     const last_block_size = input.len % full_encoded_block_size;
-
-    const last_block_decoded_size =
-        if (last_block_size == 0)
-            0
-        else if (last_block_size < encoded_block_sizes.len and encoded_block_sizes[last_block_size] != 0)
-            encoded_block_sizes[last_block_size]
-        else
-            return error.InvalidLength;
-
-    const output_size = full_blocks_count * full_block_size + last_block_decoded_size;
+    const output_size = full_block_size * full_blocks_count + maxEncodedSize(last_block_size);
 
     var output = try allocator.alloc(u8, output_size);
     errdefer allocator.free(output);
@@ -107,7 +98,7 @@ fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     }
 
     if (last_block_size > 0) {
-        try decodeBlock(
+        try encodeBlock(
             input[in_index..],
             last_block_size,
             output[out_index..],
@@ -118,10 +109,9 @@ fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
 }
 
 fn decodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!void {
-    if (block_size == 0 or block_size > full_encoded_block_size) return error.InvalidInput;
+    if (block_size == 0 or block_size > full_encoded_block_size) return error.InvalidBlockSize;
 
-    const decoded_size =
-        if (block_size < encoded_block_sizes.len) encoded_block_sizes[block_size] else 0;
+    const decoded_size = @min(block_size, output.len);
 
     if (decoded_size == 0) return error.InvalidLength;
 
@@ -134,22 +124,16 @@ fn decodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
         const char = input[@intCast(i)];
 
         const digit = reverse_alphabet[char];
-        if (digit < 0) {
-            return error.InvalidCharacter;
-        }
+        if (digit < 0) return error.InvalidCharacter;
 
         const product = @mulWithOverflow(order, @as(u64, @intCast(digit)));
-        if (product[1] != 0) {
-            return error.Overflow;
-        }
+        if (product[1] != 0) return error.Overflow;
 
         const sum = @addWithOverflow(num, product[0]);
-        if (sum[1] != 0) {
-            return error.Overflow;
-        }
+        if (sum[1] != 0) return error.Overflow;
 
         num = sum[0];
-        order *= alphabet.len;
+        order = @mulWithOverflow(order, alphabet.len)[0];
     }
 
     if (decoded_size < full_block_size) {
@@ -163,6 +147,17 @@ fn decodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
         output[@intCast(j)] = @intCast(tmp & 0xFF);
         tmp >>= 8;
     }
+}
+
+fn maxEncodedSize(size: usize) usize {
+    const bits_count = @as(u64, size) * 8;
+    var max: u64 = if (bits_count == 64) std.math.maxInt(u64) else (@as(u64, 1) << @intCast(bits_count)) - 1;
+
+    var i: usize = 0;
+    while (max != 0) : (i += 1) {
+        max /= alphabet.len;
+    }
+    return i;
 }
 
 const Base58Error = error{
@@ -188,7 +183,6 @@ test "decode address" {
     const allocator = std.testing.allocator;
     const address = "4B33mFPMq6mKi7Eiyd5XuyKRVMGVZz1Rqb9ZTyGApXW5d1aT7UBDZ89ewmnWFkzJ5wPd2SFbn313vCT8a4E2Qf4KQH4pNey";
 
-    // Not sure why this fails :((
     const result = try decode(allocator, address);
     defer allocator.free(result);
 
