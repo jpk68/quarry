@@ -2,7 +2,7 @@
     .name = .quarry,
     .version = "0.1.0",
     .fingerprint = 0xa0b1eecca5fba800, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.16.0-dev.3121+d34b868bc",
+    .minimum_zig_version = "0.16.0-dev.3142+5ccfeb926",
     .dependencies = .{},
     .paths = .{
         "build.zig",
