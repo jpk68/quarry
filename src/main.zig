@@ -14,24 +14,24 @@ const log = std.log.scoped(.main);
 pub fn main(init: std.process.Init.Minimal) !void {
     // DebugAllocator is used in Debug mode to detect memory leaks.
     // SmpAllocator is used in Release modes.
-    var gpa_inst: std.heap.DebugAllocator(.{}) = .init;
-    const allocator = if (builtin.mode == .Debug) gpa_inst.allocator() else std.heap.smp_allocator;
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.smp_allocator;
 
     defer if (builtin.mode == .Debug) {
-        _ = gpa_inst.deinit();
+        _ = gpa.deinit();
     };
 
-    var io_inst: Io.Threaded = .init(allocator, .{
+    var threaded: Io.Threaded = .init(allocator, .{
         .environ = init.environ,
         .argv0 = .init(init.args),
     });
-    defer io_inst.deinit();
-    const io = io_inst.io();
+    defer threaded.deinit();
+    const io = threaded.io();
 
-    log.debug("Loading config from args", .{});
-    var config = try Config.initFromArgs(init.args);
+    log.debug("Attempting to load config from args", .{});
+    var config = try Config.init(init.args);
 
-    log.debug("Creating and running app", .{});
+    log.debug("Running main loop", .{});
     const app = try App.init(allocator, io, &config);
 
     return app.run();

@@ -5,3 +5,6 @@ zig-pkg/
 .DS_Store
 .vscode/
 .idea/
+
+tests/
+p2pool_cache.bin

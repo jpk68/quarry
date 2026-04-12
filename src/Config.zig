@@ -9,19 +9,16 @@ const log = std.log.scoped(.config);
 
 const Config = @This();
 
-// TODO
-// Add config options for node_addr and data_dir
-// Refactor this whole thing because it sucks
+// TODO add config options for node_addr and data_dir
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
-node_addr: []const u8 = "127.0.0.1",
 node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
-// Maybe these should be changed..?
 max_peers_outgoing: u32 = 10,
 max_peers_incoming: u32 = 450,
-data_dir: Io.Dir = Io.Dir.cwd(),
+//node_addr: []const u8 = "127.0.0.1",
+//data_dir: Io.Dir = Io.Dir.cwd(),
 
 pub fn initFromArgs(args: std.process.Args) !Config {
     var result: Config = .{};
@@ -109,18 +106,18 @@ fn exitHelp() noreturn {
         \\Usage: quarry [options]
         \\
         \\Options:
-        \\  --help                  Print this help message
-        \\  --version               Print version and build info
+        \\  --help, -h              Print this help message
+        \\  --version, -v           Print version and build info
         \\
         \\  --network               Monero network to connect to
         \\  --sidechain             P2Pool sidechain to mine on
         \\
-        \\  --node                  Address of Monero node
         \\  --rpc-port              RPC port of Monero daemon
         \\  --zmq-port              ZMQ port of Monero daemon
         \\
         \\  --max-peers-outgoing    Maximum number of outgoing peers
         \\  --max-peers-incoming    Maximum number of incoming peers
+        \\
         \\
     , .{});
 
