@@ -19,7 +19,7 @@ const reverse_alphabet = blk: {
 };
 
 /// Encodes an arbitrary-length slice into Base58.
-fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
+pub fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     if (input.len == 0) return error.InvalidInput;
 
     const full_blocks_count = @divFloor(input.len, full_block_size);
@@ -74,7 +74,7 @@ fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
 }
 
 /// Decodes an arbitrary-length Base58 slice.
-fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
+pub fn decode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
     if (input.len == 0) return error.InvalidInput;
 
     const full_blocks_count = @divFloor(input.len, full_encoded_block_size);
@@ -151,7 +151,8 @@ fn decodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
 
 fn maxEncodedSize(size: usize) usize {
     const bits_count = @as(u64, size) * 8;
-    var max: u64 = if (bits_count == 64) std.math.maxInt(u64) else (@as(u64, 1) << @intCast(bits_count)) - 1;
+    var max: u64 =
+        if (bits_count == 64) std.math.maxInt(u64) else (@as(u64, 1) << @intCast(bits_count)) - 1;
 
     var i: usize = 0;
     while (max != 0) : (i += 1) {
@@ -168,13 +169,13 @@ const Base58Error = error{
     Overflow,
 } || Allocator.Error;
 
-test "constant sizes" {
+test "sizes of constants" {
     try testing.expectEqual(full_block_size, 8);
     try testing.expectEqual(full_encoded_block_size, 11);
     try testing.expectEqual(alphabet.len, 58);
 }
 
-test "constant types" {
+test "types of constants" {
     try testing.expectEqual(@TypeOf(full_block_size), usize);
     try testing.expectEqual(@TypeOf(full_encoded_block_size), usize);
 }
@@ -183,10 +184,9 @@ test "decode address" {
     const allocator = std.testing.allocator;
     const address = "4B33mFPMq6mKi7Eiyd5XuyKRVMGVZz1Rqb9ZTyGApXW5d1aT7UBDZ89ewmnWFkzJ5wPd2SFbn313vCT8a4E2Qf4KQH4pNey";
 
+    // This is broken again :((
     const result = try decode(allocator, address);
     defer allocator.free(result);
-
-    std.debug.print("Result: {any}\n", .{result});
 }
 
 test "encode address" {
