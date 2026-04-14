@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) void {
     // Define custom build options/directives
     const use_llvm = b.option(bool, "use-llvm", "Use LLVM backend for Zig codegen");
     const fmt_check = b.option(bool, "fmt-check", "Check formatting of source files");
+    const static_libs = b.option(bool, "static-libs", "Use static linking for system libraries");
 
     // Embed the build.zig.zon file to access version info
     const build_zig_zon = b.createModule(.{
@@ -42,7 +43,10 @@ pub fn build(b: *std.Build) void {
         .use_llvm = use_llvm,
         .use_lld = use_llvm,
     });
-    quarry.root_module.linkSystemLibrary("libzmq", .{});
+    quarry.root_module.linkSystemLibrary("libzmq", .{
+        // Use static linking unless specified otherwise
+        .preferred_link_mode = if (static_libs == false) .dynamic else .static,
+    });
     b.installArtifact(quarry);
 
     const run_step = b.step("run", "Run the app");
