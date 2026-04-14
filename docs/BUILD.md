@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-Building requires the latest release of [Zig master](https://ziglang.org/download/) and `libzmq`.
+Building requires the latest stable release of [Zig](https://ziglang.org/download/) and `libzmq`.
 
 Follow [these instructions](https://ziglang.org/learn/getting-started/) to download Zig, and use the appropriate command below to install the needed libraries for your platform.
 
