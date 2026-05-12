@@ -1,7 +1,6 @@
 const std = @import("std");
 
-// TODO
-// Add release targets
+// TODO add release targets
 
 pub fn build(b: *std.Build) void {
     // Use default per-platform target and optimization options
