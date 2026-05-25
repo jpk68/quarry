@@ -131,7 +131,7 @@ pub const Server = struct {
 };
 
 test "make server" {
-    const alloc = std.heap.page_allocator;
+    const alloc = std.testing.allocator;
     const io = std.testing.io;
 
     const serv = try Server.init(alloc, io);
