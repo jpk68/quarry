@@ -38,9 +38,9 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "build.zig.zon", .module = build_zig_zon },
             },
         }),
-        // Use LLVM by default. Zig's self-hosted codegen currently has some issues
-        .use_llvm = use_llvm orelse true,
-        .use_lld = use_llvm orelse true,
+        // Use LLVM by default. Zig's self-hosted codegen may have some issues
+        .use_llvm = use_llvm orelse false,
+        .use_lld = use_llvm orelse false,
     });
     quarry.root_module.linkSystemLibrary("libzmq", .{});
     b.installArtifact(quarry);
