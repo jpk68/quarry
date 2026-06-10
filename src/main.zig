@@ -29,7 +29,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const io = threaded.io();
 
     log.debug("Attempting to load config from args", .{});
-    var config = try Config.initFromArgs(init.args);
+    var config = try Config.initFromArgs(allocator, init.args);
 
     log.debug("Running main loop", .{});
     const app = try App.init(allocator, io, &config);

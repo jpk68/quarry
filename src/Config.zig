@@ -3,7 +3,9 @@ const builtin = @import("builtin");
 
 const build = @import("build.zig.zon");
 const common = @import("common.zig");
+const base58 = @import("crypto/base58.zig");
 
+const Allocator = std.mem.Allocator;
 const Io = std.Io;
 const log = std.log.scoped(.config);
 
@@ -17,10 +19,11 @@ node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
 max_peers_outgoing: u32 = 10,
 max_peers_incoming: u32 = 450,
+wallet_address: []const u8 = "",
 //node_addr: []const u8 = "127.0.0.1",
 //data_dir: Io.Dir = Io.Dir.cwd(),
 
-pub fn initFromArgs(args: std.process.Args) !Config {
+pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
     var result: Config = .{};
 
     // Get iterator and throw away first argument (executable name)
@@ -32,6 +35,16 @@ pub fn initFromArgs(args: std.process.Args) !Config {
             exitHelp();
         } else if (std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-v")) {
             exitVersion();
+        } else if (std.mem.eql(u8, arg, "--wallet") or std.mem.eql(u8, arg, "-w")) {
+            if (args_it.next()) |s| {
+                result.wallet_address = base58.decode(allocator, @constCast(s)) catch {
+                    log.err("Invalid Monero address: {s}", .{s});
+                    std.process.exit(1);
+                };
+            } else {
+                log.err("An argument must be provided for {s}", .{arg});
+                std.process.exit(1);
+            }
         } else if (std.mem.eql(u8, arg, "--network")) {
             if (args_it.next()) |s| {
                 result.network_type = std.meta.stringToEnum(common.NetworkType, s) orelse {
@@ -108,6 +121,8 @@ fn exitHelp() noreturn {
         \\Options:
         \\  --help, -h              Print this help message
         \\  --version, -v           Print version and build info
+        \\
+        \\  --wallet, -w            Monero wallet to send payouts to
         \\
         \\  --network               Monero network to connect to
         \\  --sidechain             P2Pool sidechain to mine on
