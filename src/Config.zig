@@ -11,7 +11,9 @@ const log = std.log.scoped(.config);
 
 const Config = @This();
 
-// TODO add config options for node_addr and data_dir
+// TODO
+// add config options for node_addr and data_dir
+// actually validate length/validity of addresses instead of just decoding them
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
