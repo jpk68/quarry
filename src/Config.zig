@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 const build = @import("build.zig.zon");
 const common = @import("common.zig");
-const base58 = @import("crypto/base58.zig");
+const Wallet = @import("crypto/wallet.zig").Wallet;
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
@@ -14,6 +14,7 @@ const Config = @This();
 // TODO
 // add config options for node_addr and data_dir
 // actually validate length/validity of addresses instead of just decoding them
+// deinit wallet struct on exit
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
@@ -21,7 +22,7 @@ node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
 max_peers_outgoing: u32 = 10,
 max_peers_incoming: u32 = 450,
-wallet_address: []const u8 = "",
+wallet: Wallet = .{},
 //node_addr: []const u8 = "127.0.0.1",
 //data_dir: Io.Dir = Io.Dir.cwd(),
 
@@ -39,7 +40,7 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
             exitVersion();
         } else if (std.mem.eql(u8, arg, "--wallet") or std.mem.eql(u8, arg, "-w")) {
             if (args_it.next()) |s| {
-                result.wallet_address = base58.decode(allocator, @constCast(s)) catch {
+                result.wallet = Wallet.parseAddress(allocator, @constCast(s)) catch {
                     log.err("Invalid Monero address: {s}", .{s});
                     std.process.exit(1);
                 };
