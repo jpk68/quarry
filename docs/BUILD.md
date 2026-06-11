@@ -14,7 +14,7 @@ Follow [these instructions](https://ziglang.org/learn/getting-started/) to downl
 sudo apt install libzmq3-dev
 ```
 
-### Arch
+### Arch/Artix
 ```bash
 sudo pacman -S zeromq --needed
 ```

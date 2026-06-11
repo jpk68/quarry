@@ -125,7 +125,7 @@ fn exitHelp() noreturn {
         \\  --help, -h              Print this help message
         \\  --version, -v           Print version and build info
         \\
-        \\  --wallet, -w            Monero wallet to send payouts to
+        \\  --wallet, -w            Monero wallet address to send payouts to
         \\
         \\  --network               Monero network to connect to
         \\  --sidechain             P2Pool sidechain to mine on
