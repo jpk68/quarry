@@ -12,8 +12,7 @@ const log = std.log.scoped(.config);
 const Config = @This();
 
 // TODO
-// add config options for node_addr and data_dir
-// actually validate length/validity of addresses instead of just decoding them
+// add config option for data_dir
 // deinit wallet struct on exit
 
 network_type: common.NetworkType = .mainnet,
@@ -48,26 +47,6 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
                 log.err("An argument must be provided for {s}", .{arg});
                 std.process.exit(1);
             }
-        } else if (std.mem.eql(u8, arg, "--network")) {
-            if (args_it.next()) |s| {
-                result.network_type = std.meta.stringToEnum(common.NetworkType, s) orelse {
-                    log.err("Invalid network type: {s}", .{s});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--sidechain")) {
-            if (args_it.next()) |s| {
-                result.sidechain_type = std.meta.stringToEnum(common.SidechainType, s) orelse {
-                    log.err("Invalid sidechain type: {s}", .{s});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
         } else if (std.mem.eql(u8, arg, "--node")) {
             if (args_it.next()) |s| {
                 result.node_addr = s;
@@ -89,6 +68,26 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
             if (args_it.next()) |port| {
                 result.node_zmq_port = std.fmt.parseInt(u16, port, 10) catch {
                     log.err("Invalid port number: {s}", .{port});
+                    std.process.exit(1);
+                };
+            } else {
+                log.err("An argument must be provided for {s}", .{arg});
+                std.process.exit(1);
+            }
+        } else if (std.mem.eql(u8, arg, "--network")) {
+            if (args_it.next()) |s| {
+                result.network_type = std.meta.stringToEnum(common.NetworkType, s) orelse {
+                    log.err("Invalid network type: {s}", .{s});
+                    std.process.exit(1);
+                };
+            } else {
+                log.err("An argument must be provided for {s}", .{arg});
+                std.process.exit(1);
+            }
+        } else if (std.mem.eql(u8, arg, "--sidechain")) {
+            if (args_it.next()) |s| {
+                result.sidechain_type = std.meta.stringToEnum(common.SidechainType, s) orelse {
+                    log.err("Invalid sidechain type: {s}", .{s});
                     std.process.exit(1);
                 };
             } else {
@@ -143,7 +142,6 @@ fn exitHelp() noreturn {
         \\
         \\  --max-peers-outgoing    Maximum number of outgoing peers
         \\  --max-peers-incoming    Maximum number of incoming peers
-        \\
         \\
     , .{});
 
