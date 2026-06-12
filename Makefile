@@ -6,7 +6,7 @@ debug:
 	zig build --summary all
 
 run:
-	zig build run --summary all
+	zig build run
 
 test:
 	zig build test --summary all
