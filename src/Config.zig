@@ -18,12 +18,12 @@ const Config = @This();
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
+node_addr: []const u8 = "127.0.0.1",
 node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
 max_peers_outgoing: u32 = 10,
 max_peers_incoming: u32 = 450,
 wallet: Wallet = .{},
-//node_addr: []const u8 = "127.0.0.1",
 //data_dir: Io.Dir = Io.Dir.cwd(),
 
 pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
@@ -64,6 +64,13 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
                     log.err("Invalid sidechain type: {s}", .{s});
                     std.process.exit(1);
                 };
+            } else {
+                log.err("An argument must be provided for {s}", .{arg});
+                std.process.exit(1);
+            }
+        } else if (std.mem.eql(u8, arg, "--node")) {
+            if (args_it.next()) |s| {
+                result.node_addr = s;
             } else {
                 log.err("An argument must be provided for {s}", .{arg});
                 std.process.exit(1);
@@ -127,11 +134,12 @@ fn exitHelp() noreturn {
         \\
         \\  --wallet, -w            Monero wallet address to send payouts to
         \\
-        \\  --network               Monero network to connect to
-        \\  --sidechain             P2Pool sidechain to mine on
-        \\
+        \\  --node                  IP address of Monero node
         \\  --rpc-port              RPC port of Monero daemon
         \\  --zmq-port              ZMQ port of Monero daemon
+        \\
+        \\  --network               Monero network to connect to
+        \\  --sidechain             P2Pool sidechain to mine on
         \\
         \\  --max-peers-outgoing    Maximum number of outgoing peers
         \\  --max-peers-incoming    Maximum number of incoming peers
