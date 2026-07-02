@@ -113,7 +113,7 @@ pub const Server = struct {
         var tcp = try net.IpAddress.listen(&addr, self.io, .{});
         defer tcp.deinit(self.io);
 
-        log.info("Listening on {}", .{addr});
+        log.info("Listening on {f}", .{addr});
 
         var group: Io.Group = .init;
         defer group.cancel(self.io);
