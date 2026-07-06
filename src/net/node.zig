@@ -14,7 +14,7 @@ pub const NodeConn = struct {
     allocator: Allocator,
     io: Io,
 
-    addr: []const u8,
+    addr: Io.net.IpAddress,
     zmq_port: u16,
 
     zmq_ctx: *anyopaque,
@@ -24,7 +24,7 @@ pub const NodeConn = struct {
 
     const Self = @This();
 
-    pub fn init(allocator: Allocator, io: Io, addr: []const u8, zmq_port: u16) NodeError!Self {
+    pub fn init(allocator: Allocator, io: Io, addr: Io.net.IpAddress, zmq_port: u16) NodeError!Self {
         const ctx = c.zmq_ctx_new() orelse return error.CreateContextFailed;
         errdefer _ = c.zmq_ctx_destroy(ctx);
 
@@ -92,8 +92,14 @@ pub const NodeConn = struct {
             return error.SetSockOptionsFailed;
         }
 
+        var target_addr = self.addr;
+        switch (target_addr) {
+            .ip4 => |*a| a.port = self.zmq_port,
+            .ip6 => |*a| a.port = self.zmq_port,
+        }
+
         var addr_buf: [128]u8 = undefined;
-        const addr = std.fmt.bufPrintZ(&addr_buf, "tcp://{s}:{d}", .{ self.addr, self.zmq_port }) catch
+        const addr = std.fmt.bufPrintZ(&addr_buf, "tcp://{f}", .{target_addr}) catch
             return error.AddressTooLong;
 
         if (c.zmq_connect(self.zmq_sock_sub, addr) != 0) {
@@ -122,7 +128,10 @@ pub const NodeConn = struct {
         const colon = std.mem.indexOfScalar(u8, frame[0..frame_len], ':') orelse return error.InvalidMessage;
         const json_data = frame[colon + 1 .. frame_len];
 
-        return parseMinerData(self.allocator, json_data) catch return error.ParseFailed;
+        return parseMinerData(self.allocator, json_data) catch |err| {
+            log.debug("Failed to parse miner data: {}", .{err});
+            return error.ParseFailed;
+        };
     }
 };
 
@@ -147,10 +156,10 @@ const MinerDataRaw = struct {
     height: u64,
     prev_id: []const u8,
     seed_hash: []const u8,
-    difficulty: u64,
+    difficulty: []const u8,
     median_weight: u64,
     already_generated_coins: u64,
-    median_timestamp: u64,
+    median_timestamp: u64 = 0,
     tx_backlog: []const TxEntryRaw = &.{},
 };
 
@@ -173,6 +182,8 @@ fn parseMinerData(allocator: Allocator, json_data: []const u8) !MinerData {
     var seed_hash: common.Hash = undefined;
     _ = try std.fmt.hexToBytes(&seed_hash, parsed.value.seed_hash);
 
+    const difficulty = try std.fmt.parseInt(common.Difficulty, parsed.value.difficulty, 0);
+
     const tx_backlog = try allocator.alloc(Mempool.Entry, parsed.value.tx_backlog.len);
     errdefer allocator.free(tx_backlog);
 
@@ -193,7 +204,7 @@ fn parseMinerData(allocator: Allocator, json_data: []const u8) !MinerData {
         .height = parsed.value.height,
         .prev_id = prev_id,
         .seed_hash = seed_hash,
-        .difficulty = parsed.value.difficulty,
+        .difficulty = difficulty,
         .median_weight = parsed.value.median_weight,
         .already_generated_coins = parsed.value.already_generated_coins,
         .median_timestamp = parsed.value.median_timestamp,
@@ -218,6 +229,6 @@ test "init and deinit" {
     const allocator = std.testing.allocator;
     const io = std.testing.io;
 
-    var node = try NodeConn.init(allocator, io, "127.0.0.1", 18083);
+    var node = try NodeConn.init(allocator, io, Io.net.IpAddress.parseLiteral("127.0.0.1") catch unreachable, 18083);
     defer node.deinit();
 }
