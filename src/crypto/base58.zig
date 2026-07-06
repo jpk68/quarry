@@ -73,10 +73,9 @@ pub fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
 fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!void {
     if (block_size == 0 or input.len > full_block_size) return error.InvalidBlockSize;
 
-    var num: u64 = 0;
-    for (input) |b| {
-        num = (num << 8) | b;
-    }
+    var padded: [8]u8 = .{0} ** 8;
+    @memcpy(padded[8 - input.len ..], input);
+    const num = std.mem.readInt(u64, &padded, .big);
 
     var i: isize = @intCast(encoded_block_sizes[block_size] - 1);
     while (num > 0) : (i -= 1) {
@@ -150,12 +149,8 @@ fn decodeBlock(input: []const u8, output: []u8) Base58Error!void {
         num >= (@as(u64, 1) << @as(u6, @intCast(decoded_size * 8))))
         return error.Overflow;
 
-    var tmp = num;
-    var j: isize = @intCast(decoded_size - 1);
-    while (j >= 0) : (j -= 1) {
-        output[@intCast(j)] = @intCast(tmp & 0xFF);
-        tmp >>= 8;
-    }
+    const be = std.mem.toBytes(std.mem.nativeToBig(u64, num));
+    @memcpy(output, be[8 - decoded_size ..]);
 }
 
 const Base58Error = error{
