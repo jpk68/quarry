@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) void {
         .use_llvm = use_llvm orelse false,
         .use_lld = use_llvm orelse false,
     });
-    quarry.root_module.linkSystemLibrary("libzmq", .{});
+    quarry.root_module.linkSystemLibrary("libzmq", .{ .preferred_link_mode = .static });
     b.installArtifact(quarry);
 
     const run_step = b.step("run", "Run the app");
