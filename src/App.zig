@@ -20,6 +20,7 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
     const self = try allocator.create(App);
     errdefer allocator.destroy(self);
 
+    // Pass the config's sidechain type to the server, so it knows which port to listen on
     const server = try Server.init(allocator, io, config.sidechain_type);
     errdefer server.deinit();
 
@@ -69,6 +70,7 @@ fn runNode(self: *App) !void {
         };
         defer data.deinit(self.allocator);
 
-        log.info("Received miner data at height {d}", .{data.height});
+        log.info("Received miner data at block height {d}", .{data.height});
+        log.debug("{any}", .{data});
     }
 }

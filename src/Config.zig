@@ -17,7 +17,7 @@ const Config = @This();
 
 network_type: common.NetworkType = .mainnet,
 sidechain_type: common.SidechainType = .main,
-node_addr: []const u8 = "127.0.0.1",
+node_addr: Io.net.IpAddress = Io.net.IpAddress.parseLiteral("127.0.0.1") catch unreachable,
 node_rpc_port: u16 = 18081,
 node_zmq_port: u16 = 18083,
 max_peers_outgoing: u32 = 10,
@@ -49,7 +49,10 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
             }
         } else if (std.mem.eql(u8, arg, "--node")) {
             if (args_it.next()) |s| {
-                result.node_addr = s;
+                result.node_addr = Io.net.IpAddress.parseLiteral(s) catch {
+                    log.err("Invalid IP address: {s}", .{s});
+                    std.process.exit(1);
+                };
             } else {
                 log.err("An argument must be provided for {s}", .{arg});
                 std.process.exit(1);
