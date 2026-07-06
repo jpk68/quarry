@@ -1,8 +1,8 @@
 const std = @import("std");
 const c = @cImport(@cInclude("zmq.h"));
 
-const Config = @import("../Config.zig");
 const common = @import("../common.zig");
+const Mempool = @import("../Mempool.zig");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
@@ -62,25 +62,25 @@ pub const NodeConn = struct {
         var i: usize = 0;
         while (i < 100) : (i += 1) {
             var buf: [32]u8 = undefined;
-            const port = rand.int(u16);
+            const port: u16 = 49152 + rand.uintLessThan(u16, 16384);
 
-            // Formatted as a null-terminated string for C interop.
-            const host = try std.fmt.bufPrintZ(&buf, "tcp://127.0.0.1:{}", .{port});
+            // Node address, formatted as a null-terminated string for C interop.
+            const host = std.fmt.bufPrintZ(&buf, "tcp://127.0.0.1:{d}", .{port}) catch continue;
 
             if (c.zmq_bind(self.zmq_sock_pub, host) == 0) {
                 self.zmq_port_pub = port;
-            } else {
-                log.warn("Failed to bind ZMQ socket to port {d}", .{port});
-                self.io.sleep(.fromSeconds(1), .awake) catch {};
+                break;
             }
+
+            log.warn("Failed to bind ZMQ publisher socket to port {d}", .{port});
         }
 
         if (self.zmq_port_pub == null) {
-            log.info("Too many failed attempts to bind port!");
+            log.err("Too many failed attempts to bind ZMQ publisher port", .{});
             return error.TooManyFailedAttempts;
         }
 
-        log.info("Listening on port {d}", .{self.zmq_port_pub});
+        log.debug("ZMQ publisher bound to port {d}", .{self.zmq_port_pub.?});
 
         const timeout_ms: c_int = 1000;
         if (c.zmq_setsockopt(
@@ -91,36 +91,133 @@ pub const NodeConn = struct {
         ) != 0) {
             return error.SetSockOptionsFailed;
         }
+
+        var addr_buf: [128]u8 = undefined;
+        const addr = std.fmt.bufPrintZ(&addr_buf, "tcp://{s}:{d}", .{ self.addr, self.zmq_port }) catch
+            return error.AddressTooLong;
+
+        if (c.zmq_connect(self.zmq_sock_sub, addr) != 0) {
+            log.err("Failed to connect ZMQ subscriber to {s}", .{addr});
+            return error.ConnectFailed;
+        }
+
+        log.info("Connecting to node ZMQ interface at {s}", .{addr});
+
+        const topic = "json-full-miner_data";
+        if (c.zmq_setsockopt(self.zmq_sock_sub, c.ZMQ_SUBSCRIBE, topic, topic.len) != 0) {
+            return error.SubscribeFailed;
+        }
+    }
+
+    pub fn receive(self: *Self) NodeError!MinerData {
+        var msg: c.zmq_msg_t = undefined;
+        if (c.zmq_msg_init(&msg) != 0) return error.RecvFailed;
+        defer _ = c.zmq_msg_close(&msg);
+
+        if (c.zmq_msg_recv(&msg, self.zmq_sock_sub, 0) < 0) return error.RecvFailed;
+
+        const frame: [*]const u8 = @ptrCast(c.zmq_msg_data(&msg));
+        const frame_len = c.zmq_msg_size(&msg);
+
+        const colon = std.mem.indexOfScalar(u8, frame[0..frame_len], ':') orelse return error.InvalidMessage;
+        const json_data = frame[colon + 1 .. frame_len];
+
+        return parseMinerData(self.allocator, json_data) catch return error.ParseFailed;
     }
 };
 
-pub const ChainData = struct {
+pub const MinerData = struct {
     major_version: u8,
-    minor_version: u8,
-    block_height: u64,
-    previous_id: common.Hash,
+    height: u64,
+    prev_id: common.Hash,
     seed_hash: common.Hash,
     difficulty: common.Difficulty,
     median_weight: u64,
     already_generated_coins: u64,
     median_timestamp: u64,
+    tx_backlog: []Mempool.Entry,
+
+    pub fn deinit(self: MinerData, allocator: Allocator) void {
+        allocator.free(self.tx_backlog);
+    }
 };
+
+const MinerDataRaw = struct {
+    major_version: u8,
+    height: u64,
+    prev_id: []const u8,
+    seed_hash: []const u8,
+    difficulty: u64,
+    median_weight: u64,
+    already_generated_coins: u64,
+    median_timestamp: u64,
+    tx_backlog: []const TxEntryRaw = &.{},
+};
+
+const TxEntryRaw = struct {
+    id: []const u8,
+    blob_size: u64,
+    weight: u64,
+    fee: u64,
+};
+
+fn parseMinerData(allocator: Allocator, json_data: []const u8) !MinerData {
+    const parsed = try std.json.parseFromSlice(MinerDataRaw, allocator, json_data, .{
+        .ignore_unknown_fields = true,
+    });
+    defer parsed.deinit();
+
+    var prev_id: common.Hash = undefined;
+    _ = try std.fmt.hexToBytes(&prev_id, parsed.value.prev_id);
+
+    var seed_hash: common.Hash = undefined;
+    _ = try std.fmt.hexToBytes(&seed_hash, parsed.value.seed_hash);
+
+    const tx_backlog = try allocator.alloc(Mempool.Entry, parsed.value.tx_backlog.len);
+    errdefer allocator.free(tx_backlog);
+
+    for (parsed.value.tx_backlog, tx_backlog) |raw, *entry| {
+        var txid: common.Hash = undefined;
+        _ = try std.fmt.hexToBytes(&txid, raw.id);
+        entry.* = .{
+            .id = txid,
+            .blob_size = @intCast(raw.blob_size),
+            .weight = raw.weight,
+            .fee = raw.fee,
+            .time_received = 0,
+        };
+    }
+
+    return .{
+        .major_version = parsed.value.major_version,
+        .height = parsed.value.height,
+        .prev_id = prev_id,
+        .seed_hash = seed_hash,
+        .difficulty = parsed.value.difficulty,
+        .median_weight = parsed.value.median_weight,
+        .already_generated_coins = parsed.value.already_generated_coins,
+        .median_timestamp = parsed.value.median_timestamp,
+        .tx_backlog = tx_backlog,
+    };
+}
 
 const NodeError = error{
     CreateContextFailed,
     CreateSocketFailed,
     SetSockOptionsFailed,
     TooManyFailedAttempts,
+    AddressTooLong,
+    ConnectFailed,
+    SubscribeFailed,
+    RecvFailed,
+    InvalidMessage,
+    ParseFailed,
 };
 
-test "init and run" {
+test "init and deinit" {
     const allocator = std.testing.allocator;
     const io = std.testing.io;
 
-    const config: Config = .{};
-
-    var node = try NodeReader.init(allocator, io, config);
+    var node = try NodeConn.init(allocator, io, "127.0.0.1", 18083);
     defer node.deinit();
-
-    try node.connect();
 }
