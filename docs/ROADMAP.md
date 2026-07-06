@@ -4,6 +4,7 @@ This is a rough outline of the software's planned features and functionality.
 
 ## Networking
 - [ ] Finish P2P server and ZMQ interface
+- [ ] Full feature parity for IPv6
 - [ ] Add support for SOCKS proxies (regular, Tor, I2P)
 - [ ] Consider supporting the Stratum protocol
 - [ ] Consider supporting I2P's SAM protocol
