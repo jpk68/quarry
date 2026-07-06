@@ -1,4 +1,5 @@
 const std = @import("std");
+const common = @import("../common.zig");
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
@@ -20,6 +21,7 @@ pub const Server = struct {
     allocator: Allocator,
     io: Io,
 
+    sidechain_type: common.SidechainType,
     peer_id: u64,
     num_connections: usize,
 
@@ -29,12 +31,14 @@ pub const Server = struct {
     ban_list: std.ArrayList(BanInfo) = .empty,
     bans_lock: Io.Mutex = .init,
 
-    pub fn init(allocator: Allocator, io: Io) !*Server {
+    pub fn init(allocator: Allocator, io: Io, sidechain_type: common.SidechainType) !*Server {
         const self = try allocator.create(Server);
 
         self.* = .{
             .allocator = allocator,
             .io = io,
+
+            .sidechain_type = sidechain_type,
             .peer_id = 1337,
             .num_connections = 0,
         };
@@ -106,8 +110,12 @@ pub const Server = struct {
 
         log.debug("Set random local peer ID: {x}", .{self.peer_id});
 
-        // TODO determine based on sidechain type
-        const port: u16 = 7777;
+        const port: u16 = switch (self.sidechain_type) {
+            .main => 37889,
+            .mini => 37888,
+            .nano => 37890,
+        };
+
         const addr = try net.IpAddress.parse("127.0.0.1", port);
 
         var tcp = try net.IpAddress.listen(&addr, self.io, .{});
@@ -134,7 +142,7 @@ test "make server" {
     const alloc = std.testing.allocator;
     const io = std.testing.io;
 
-    const serv = try Server.init(alloc, io);
+    const serv = try Server.init(alloc, io, .main);
     defer serv.deinit();
 
     try serv.start();

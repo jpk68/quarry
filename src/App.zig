@@ -20,7 +20,7 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
     const self = try allocator.create(App);
     errdefer allocator.destroy(self);
 
-    const server = try Server.init(allocator, io);
+    const server = try Server.init(allocator, io, config.sidechain_type);
     errdefer server.deinit();
 
     const node = try NodeConn.init(allocator, io, config.node_addr, config.node_zmq_port);
