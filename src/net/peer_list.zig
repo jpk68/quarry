@@ -9,7 +9,7 @@ const file_name = "p2pool_peers.txt";
 pub const PeerList = struct {
     peers: std.ArrayList([]const u8) = .empty,
 
-    pub fn init(io: Io, allocator: Allocator, dir: Io.Dir) !PeerList {
+    pub fn init(allocator: Allocator, io: Io, dir: Io.Dir) !PeerList {
         var file = dir.openFile(io, file_name, .{ .mode = .read_write }) catch |err| switch (err) {
             error.FileNotFound => try dir.createFile(io, file_name, .{ .read = true }),
             else => return err,
@@ -47,7 +47,7 @@ test "load peer list" {
 
     const dir = Io.Dir.cwd();
 
-    var list = try PeerList.init(io, alloc, dir);
+    var list = try PeerList.init(alloc, io, dir);
     defer list.deinit(alloc);
 
     std.debug.print("{any}\n", .{list});

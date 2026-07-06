@@ -39,7 +39,7 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
             exitVersion();
         } else if (std.mem.eql(u8, arg, "--wallet") or std.mem.eql(u8, arg, "-w")) {
             if (args_it.next()) |s| {
-                result.wallet = Wallet.parseAddress(allocator, @constCast(s)) catch {
+                result.wallet = Wallet.parseAddress(allocator, s) catch {
                     log.err("Invalid Monero address: {s}", .{s});
                     std.process.exit(1);
                 };

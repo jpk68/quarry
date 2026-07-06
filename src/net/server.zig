@@ -46,6 +46,8 @@ pub const Server = struct {
     }
 
     pub fn deinit(self: *Server) void {
+        self.peer_list.deinit(self.allocator);
+        self.ban_list.deinit(self.allocator);
         self.allocator.destroy(self);
     }
 

@@ -1,5 +1,5 @@
 /// Type used to represent a 4-byte message digest.
-const hash_size: usize = 32;
+pub const hash_size: usize = 32;
 pub const Hash = [hash_size]u8;
 
 /// Type used to represent the network's mining difficulty.

@@ -37,6 +37,7 @@ pub fn init(allocator: Allocator, io: Io, config: *Config) !*App {
 }
 
 pub fn deinit(self: *App) void {
+    self.server.deinit();
     self.node.deinit();
     self.allocator.destroy(self);
 }

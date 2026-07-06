@@ -33,6 +33,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     log.debug("Running main loop", .{});
     const app = try App.init(allocator, io, &config);
+    defer app.deinit();
 
     return app.run();
 }
