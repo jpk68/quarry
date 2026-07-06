@@ -8,3 +8,4 @@ zig-pkg/
 
 tests/
 p2pool_cache.bin
+p2pool_peers.txt
