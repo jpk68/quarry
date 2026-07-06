@@ -22,6 +22,9 @@ pub const NodeConn = struct {
     zmq_sock_pub: *anyopaque,
     zmq_port_pub: ?u16,
 
+    monitor: NodeMonitor,
+    monitor_group: Io.Group,
+
     const Self = @This();
 
     pub fn init(allocator: Allocator, io: Io, addr: Io.net.IpAddress, zmq_port: u16) NodeError!Self {
@@ -34,6 +37,9 @@ pub const NodeConn = struct {
         const sock_pub = c.zmq_socket(ctx, c.ZMQ_PUB) orelse return error.CreateSocketFailed;
         errdefer _ = c.zmq_close(sock_pub);
 
+        var monitor = try NodeMonitor.init(ctx, sock_sub);
+        errdefer monitor.deinit();
+
         return .{
             .allocator = allocator,
             .io = io,
@@ -45,10 +51,15 @@ pub const NodeConn = struct {
             .zmq_sock_sub = sock_sub,
             .zmq_sock_pub = sock_pub,
             .zmq_port_pub = null,
+
+            .monitor = monitor,
+            .monitor_group = .init,
         };
     }
 
     pub fn deinit(self: *Self) void {
+        self.monitor_group.cancel(self.io);
+        self.monitor.deinit();
         _ = c.zmq_close(self.zmq_sock_sub);
         _ = c.zmq_close(self.zmq_sock_pub);
         _ = c.zmq_ctx_destroy(self.zmq_ctx);
@@ -133,6 +144,23 @@ pub const NodeConn = struct {
         const topic = "json-full-miner_data";
         if (c.zmq_setsockopt(self.zmq_sock_sub, c.ZMQ_SUBSCRIBE, topic, topic.len) != 0) {
             return error.SubscribeFailed;
+        }
+
+        self.monitor_group.concurrent(self.io, monitorLoop, .{self}) catch return error.MonitorFailed;
+    }
+
+    fn monitorLoop(self: *Self) void {
+        while (true) {
+            const event = self.monitor.nextEvent() catch |err| {
+                log.err("Failed to receive ZMQ monitor event: {t}", .{err});
+                continue;
+            };
+
+            switch (event) {
+                .connected => log.info("Connected to node ZMQ interface", .{}),
+                .disconnected => log.warn("Disconnected from node ZMQ interface", .{}),
+                .other => {},
+            }
         }
     }
 
@@ -233,6 +261,60 @@ fn parseMinerData(allocator: Allocator, json_data: []const u8) !MinerData {
     };
 }
 
+const NodeMonitor = struct {
+    zmq_sock: *anyopaque,
+
+    const Self = @This();
+    const endpoint = "inproc://node-monitor";
+
+    fn init(ctx: *anyopaque, sub_socket: *anyopaque) !Self {
+        if (c.zmq_socket_monitor(sub_socket, endpoint, c.ZMQ_EVENT_CONNECTED | c.ZMQ_EVENT_DISCONNECTED) != 0) {
+            return error.MonitorFailed;
+        }
+
+        const sock = c.zmq_socket(ctx, c.ZMQ_PAIR) orelse return error.CreateSocketFailed;
+        errdefer _ = c.zmq_close(sock);
+
+        if (c.zmq_connect(sock, endpoint) != 0) {
+            return error.ConnectFailed;
+        }
+
+        return .{ .zmq_sock = sock };
+    }
+
+    fn deinit(self: *Self) void {
+        _ = c.zmq_close(self.zmq_sock);
+    }
+
+    const EventType = enum {
+        connected,
+        disconnected,
+        other,
+    };
+
+    fn nextEvent(self: *Self) !EventType {
+        var event_msg: c.zmq_msg_t = undefined;
+        if (c.zmq_msg_init(&event_msg) != 0) return error.RecvFailed;
+        defer _ = c.zmq_msg_close(&event_msg);
+
+        if (c.zmq_msg_recv(&event_msg, self.zmq_sock, 0) < 0) return error.RecvFailed;
+
+        const event_data: [*]const u8 = @ptrCast(c.zmq_msg_data(&event_msg));
+        const event_id = std.mem.bytesToValue(u16, event_data[0..2]);
+
+        var endpoint_msg: c.zmq_msg_t = undefined;
+        if (c.zmq_msg_init(&endpoint_msg) != 0) return error.RecvFailed;
+        defer _ = c.zmq_msg_close(&endpoint_msg);
+        _ = c.zmq_msg_recv(&endpoint_msg, self.zmq_sock, 0);
+
+        return switch (event_id) {
+            c.ZMQ_EVENT_CONNECTED => .connected,
+            c.ZMQ_EVENT_DISCONNECTED => .disconnected,
+            else => .other,
+        };
+    }
+};
+
 const NodeError = error{
     CreateContextFailed,
     CreateSocketFailed,
@@ -244,6 +326,7 @@ const NodeError = error{
     RecvFailed,
     InvalidMessage,
     ParseFailed,
+    MonitorFailed,
 };
 
 test "init and deinit" {
