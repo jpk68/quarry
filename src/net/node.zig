@@ -73,6 +73,7 @@ pub const NodeConn = struct {
             }
 
             log.warn("Failed to bind ZMQ publisher socket to port {d}", .{port});
+            Io.sleep(self.io, .fromMilliseconds(100), .awake) catch {};
         }
 
         if (self.zmq_port_pub == null) {
@@ -82,12 +83,32 @@ pub const NodeConn = struct {
 
         log.debug("ZMQ publisher bound to port {d}", .{self.zmq_port_pub.?});
 
-        const timeout_ms: c_int = 1000;
+        const connect_timeout_ms: c_int = 1000;
         if (c.zmq_setsockopt(
             self.zmq_sock_sub,
             c.ZMQ_CONNECT_TIMEOUT,
-            &timeout_ms,
-            @sizeOf(@TypeOf(timeout_ms)),
+            &connect_timeout_ms,
+            @sizeOf(@TypeOf(connect_timeout_ms)),
+        ) != 0) {
+            return error.SetSockOptionsFailed;
+        }
+
+        const handshake_ivl_ms: c_int = 1000;
+        if (c.zmq_setsockopt(
+            self.zmq_sock_sub,
+            c.ZMQ_HANDSHAKE_IVL,
+            &handshake_ivl_ms,
+            @sizeOf(@TypeOf(handshake_ivl_ms)),
+        ) != 0) {
+            return error.SetSockOptionsFailed;
+        }
+
+        const max_msg_size: i64 = 32 * 1024 * 1024;
+        if (c.zmq_setsockopt(
+            self.zmq_sock_sub,
+            c.ZMQ_MAXMSGSIZE,
+            &max_msg_size,
+            @sizeOf(@TypeOf(max_msg_size)),
         ) != 0) {
             return error.SetSockOptionsFailed;
         }
