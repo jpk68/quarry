@@ -18,4 +18,4 @@ fmt:
 	zig fmt .
 
 clean:
-	rm -rf .zig-cache/ zig-out/ zig-pkg/
+	rm -rf .zig-cache/ zig-out/
