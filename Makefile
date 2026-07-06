@@ -12,7 +12,7 @@ test:
 	zig build test --summary all
 
 release:
-	zig build --release=fast -Duse-llvm=true -Dfmt-check=true --summary all
+	zig build --release=safe -Duse-llvm=true -Dfmt-check=true --summary all
 
 fmt:
 	zig fmt .
