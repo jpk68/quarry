@@ -248,6 +248,8 @@ fn parseMinerData(allocator: Allocator, json_data: []const u8) !MinerData {
         };
     }
 
+    std.mem.sortUnstable(Mempool.Entry, tx_backlog, {}, Mempool.Entry.lessThan);
+
     return .{
         .major_version = parsed.value.major_version,
         .height = parsed.value.height,

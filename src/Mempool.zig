@@ -10,14 +10,19 @@ entries: std.ArrayList(Entry) = .empty,
 
 pub const Entry = struct {
     id: common.Hash,
-    blob_size: usize,
+    blob_size: u64,
     weight: u64,
     fee: u64,
     time_received: u64,
-};
 
-// TODO
-// Sort and pick functions
+    pub fn lessThan(context: void, a: Entry, b: Entry) bool {
+        _ = context;
+
+        const a_rate: u128 = @as(u128, a.fee) * @as(u128, b.weight);
+        const b_rate: u128 = @as(u128, b.fee) * @as(u128, a.weight);
+        return a_rate > b_rate;
+    }
+};
 
 pub fn getBlockReward(weight: u64, median_weight: u64, fees: u64) u64 {
     // No penalty incurred if block weight is smaller than the median weight.
