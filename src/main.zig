@@ -37,3 +37,13 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     return app.run();
 }
+
+test {
+    _ = @import("Config.zig");
+    _ = @import("App.zig");
+    _ = @import("cache.zig");
+    _ = @import("crypto/wallet.zig");
+    _ = @import("crypto/base58.zig");
+    _ = @import("net/node.zig");
+    _ = @import("net/peer_list.zig");
+}

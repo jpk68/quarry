@@ -75,7 +75,7 @@ fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!v
 
     var padded: [8]u8 = .{0} ** 8;
     @memcpy(padded[8 - input.len ..], input);
-    const num = std.mem.readInt(u64, &padded, .big);
+    var num = std.mem.readInt(u64, &padded, .big);
 
     var i: isize = @intCast(encoded_block_sizes[block_size] - 1);
     while (num > 0) : (i -= 1) {
