@@ -1,4 +1,4 @@
-/// Type used to represent a 4-byte message digest.
+/// Type used to represent a 32-byte message digest.
 pub const hash_size: usize = 32;
 pub const Hash = [hash_size]u8;
 
