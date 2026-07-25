@@ -1,8 +1,6 @@
 const std = @import("std");
 const common = @import("common.zig");
 
-const Mempool = @This();
-
 // Base block reward is constant after reaching tail emission.
 const base_reward: u64 = 600000000000;
 
