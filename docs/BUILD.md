@@ -22,7 +22,7 @@ sudo pacman -S zeromq --needed
 ## Build steps
 
 ```bash
-git clone https://codeberg.org/jpk68/quarry
+git clone https://github.com/jpk68/quarry
 cd quarry
 zig build
 ```
