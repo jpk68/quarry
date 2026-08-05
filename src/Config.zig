@@ -7,6 +7,7 @@ const Wallet = @import("crypto/wallet.zig").Wallet;
 
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
+const Args = std.process.Args;
 const log = std.log.scoped(.config);
 
 const Config = @This();
@@ -25,7 +26,49 @@ max_peers_incoming: u32 = 450,
 wallet: Wallet = .{},
 //data_dir: Io.Dir = Io.Dir.cwd(),
 
-pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
+const Flag = enum {
+    help,
+    version,
+    wallet,
+    node,
+    @"rpc-port",
+    @"zmq-port",
+    network,
+    sidechain,
+    @"max-peers-outgoing",
+    @"max-peers-incoming",
+};
+
+const short_aliases = std.StaticStringMap(Flag).initComptime(.{
+    .{ "-h", .help },
+    .{ "-v", .version },
+    .{ "-w", .wallet },
+});
+
+fn nextArg(args_it: *Args.Iterator, name: []const u8) [:0]const u8 {
+    return args_it.next() orelse {
+        log.err("An argument must be provided for {s}", .{name});
+        std.process.exit(1);
+    };
+}
+
+fn nextIntArg(comptime T: type, args_it: *Args.Iterator, name: []const u8, comptime label: []const u8) T {
+    const input = nextArg(args_it, name);
+    return std.fmt.parseInt(T, input, 10) catch {
+        log.err("Invalid " ++ label ++ ": {s}", .{input});
+        std.process.exit(1);
+    };
+}
+
+fn nextEnumArg(comptime T: type, args_it: *Args.Iterator, name: []const u8, comptime label: []const u8) T {
+    const input = nextArg(args_it, name);
+    return std.meta.stringToEnum(T, input) orelse {
+        log.err("Invalid " ++ label ++ ": {s}", .{input});
+        std.process.exit(1);
+    };
+}
+
+pub fn initFromArgs(allocator: Allocator, args: Args) !Config {
     var result: Config = .{};
 
     // Get iterator and throw away first argument (executable name)
@@ -33,93 +76,40 @@ pub fn initFromArgs(allocator: Allocator, args: std.process.Args) !Config {
     _ = args_it.next();
 
     while (args_it.next()) |arg| {
-        if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
-            exitHelp();
-        } else if (std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-v")) {
-            exitVersion();
-        } else if (std.mem.eql(u8, arg, "--wallet") or std.mem.eql(u8, arg, "-w")) {
-            if (args_it.next()) |s| {
-                result.wallet = Wallet.parseAddress(allocator, s) catch {
-                    log.err("Invalid Monero address: {s}", .{s});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
+        const flag = short_aliases.get(arg) orelse blk: {
+            if (!std.mem.startsWith(u8, arg, "--")) {
+                log.err("Invalid option: {s}", .{arg});
                 std.process.exit(1);
             }
-        } else if (std.mem.eql(u8, arg, "--node")) {
-            if (args_it.next()) |s| {
-                result.node_addr = Io.net.IpAddress.parseLiteral(s) catch {
-                    log.err("Invalid IP address: {s}", .{s});
+            break :blk std.meta.stringToEnum(Flag, arg[2..]) orelse {
+                log.err("Invalid option: {s}", .{arg});
+                std.process.exit(1);
+            };
+        };
+
+        switch (flag) {
+            .help => exitHelp(),
+            .version => exitVersion(),
+            .wallet => {
+                const input = nextArg(&args_it, arg);
+                result.wallet = Wallet.parseAddress(allocator, input) catch {
+                    log.err("Invalid Monero address: {s}", .{input});
                     std.process.exit(1);
                 };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--rpc-port")) {
-            if (args_it.next()) |port| {
-                result.node_rpc_port = std.fmt.parseInt(u16, port, 10) catch {
-                    log.err("Invalid port number: {s}", .{port});
+            },
+            .node => {
+                const input = nextArg(&args_it, arg);
+                result.node_addr = Io.net.IpAddress.parseLiteral(input) catch {
+                    log.err("Invalid IP address: {s}", .{input});
                     std.process.exit(1);
                 };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--zmq-port")) {
-            if (args_it.next()) |port| {
-                result.node_zmq_port = std.fmt.parseInt(u16, port, 10) catch {
-                    log.err("Invalid port number: {s}", .{port});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--network")) {
-            if (args_it.next()) |s| {
-                result.network_type = std.meta.stringToEnum(common.NetworkType, s) orelse {
-                    log.err("Invalid network type: {s}", .{s});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--sidechain")) {
-            if (args_it.next()) |s| {
-                result.sidechain_type = std.meta.stringToEnum(common.SidechainType, s) orelse {
-                    log.err("Invalid sidechain type: {s}", .{s});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--max-peers-outgoing")) {
-            if (args_it.next()) |n| {
-                result.max_peers_outgoing = std.fmt.parseInt(u32, n, 10) catch {
-                    log.err("Invalid number: {s}", .{n});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else if (std.mem.eql(u8, arg, "--max-peers-incoming")) {
-            if (args_it.next()) |n| {
-                result.max_peers_incoming = std.fmt.parseInt(u32, n, 10) catch {
-                    log.err("Invalid number: {s}", .{n});
-                    std.process.exit(1);
-                };
-            } else {
-                log.err("An argument must be provided for {s}", .{arg});
-                std.process.exit(1);
-            }
-        } else {
-            log.err("Invalid option: {s}", .{arg});
-            std.process.exit(1);
+            },
+            .@"rpc-port" => result.node_rpc_port = nextIntArg(u16, &args_it, arg, "port number"),
+            .@"zmq-port" => result.node_zmq_port = nextIntArg(u16, &args_it, arg, "port number"),
+            .network => result.network_type = nextEnumArg(common.NetworkType, &args_it, arg, "network type"),
+            .sidechain => result.sidechain_type = nextEnumArg(common.SidechainType, &args_it, arg, "sidechain type"),
+            .@"max-peers-outgoing" => result.max_peers_outgoing = nextIntArg(u32, &args_it, arg, "number"),
+            .@"max-peers-incoming" => result.max_peers_incoming = nextIntArg(u32, &args_it, arg, "number"),
         }
     }
 
