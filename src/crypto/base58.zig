@@ -8,7 +8,7 @@ const encoded_block_sizes = [9]usize{ 0, 2, 3, 5, 6, 7, 9, 10, 11 };
 const full_block_size = encoded_block_sizes.len - 1;
 const full_encoded_block_size = encoded_block_sizes[full_block_size];
 
-// Since this is global, it's implicitly comptime.
+/// Since this is global, it's implicitly comptime.
 const reverse_alphabet = blk: {
     var table: [256]i8 = [_]i8{-1} ** 256;
     for (alphabet, 0..) |c, i| {

@@ -1,7 +1,7 @@
 const std = @import("std");
 const common = @import("common.zig");
 
-// Base block reward is constant after reaching tail emission.
+/// Base block reward is constant after reaching tail emission.
 const base_reward: u64 = 600000000000;
 
 entries: std.ArrayList(Entry) = .empty,
