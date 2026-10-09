@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
     // Define custom build options/directives
     const use_llvm = b.option(bool, "use-llvm", "Use LLVM backend for Zig codegen");
     const fmt_check = b.option(bool, "fmt-check", "Check formatting of source files");
+    const test_filters = b.option([]const []const u8, "test-filter", "Only run tests whose names contain this text") orelse &.{};
 
     // Embed the build.zig.zon file to access version info
     const build_zig_zon = b.createModule(.{
@@ -18,12 +19,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // RandomX is compiled as a separate unit
-    const randomx = b.addModule("randomx", .{
-        .root_source_file = b.path("src/randomx/root.zig"),
+    // RandomX comes from zig-randomx (x86-64 JIT and interpreter, v1 and v2)
+    const randomx = b.dependency("randomx", .{
         .target = target,
         .optimize = optimize,
-    });
+    }).module("randomx");
 
     const quarry = b.addExecutable(.{
         .name = "quarry",
@@ -38,9 +38,10 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "build.zig.zon", .module = build_zig_zon },
             },
         }),
-        // Use LLVM by default. Zig's self-hosted codegen may have some issues
-        .use_llvm = use_llvm orelse false,
-        .use_lld = use_llvm orelse false,
+        // Use LLVM for release builds: the self-hosted backend builds faster, but its code hashes
+        // RandomX several times slower (AES and BLAKE2b over the scratchpad on every hash).
+        .use_llvm = use_llvm orelse (optimize != .Debug),
+        .use_lld = use_llvm orelse (optimize != .Debug),
     });
     quarry.root_module.linkSystemLibrary("libzmq", .{ .preferred_link_mode = .static });
     b.installArtifact(quarry);
@@ -54,14 +55,10 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const randomx_tests = b.addTest(.{ .root_module = randomx });
-    const run_randomx_tests = b.addRunArtifact(randomx_tests);
-
-    const quarry_tests = b.addTest(.{ .root_module = quarry.root_module });
+    const quarry_tests = b.addTest(.{ .root_module = quarry.root_module, .filters = test_filters });
     const run_quarry_tests = b.addRunArtifact(quarry_tests);
 
     const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&run_randomx_tests.step);
     test_step.dependOn(&run_quarry_tests.step);
 
     // Custom directive to check and format source files

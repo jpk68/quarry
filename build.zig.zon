@@ -3,7 +3,12 @@
     .version = "0.1.0",
     .fingerprint = 0xa0b1eecca5fba800, // Changing this has security and trust implications.
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .randomx = .{
+            .url = "git+https://github.com/NateBrune/zig-randomx#b025f797f61665dfce9e5f9f551a266eb7c9ee30",
+            .hash = "randomx-0.1.0-XtpUqXz2AQCmMVDxkaTelq1nYtB_lIwxx49aqmd4tfKM",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

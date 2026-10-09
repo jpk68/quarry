@@ -10,7 +10,7 @@ This is a rough outline of the software's planned features and functionality.
 - [ ] Consider supporting I2P's SAM protocol
 
 ## PoW
-- [ ] Make RandomX work
+- [x] Make RandomX work (via zig-randomx)
 - [ ] Support a JIT-compiled backend for x86-64
 
 ## Misc.

@@ -46,4 +46,7 @@ test {
     _ = @import("crypto/base58.zig");
     _ = @import("net/node.zig");
     _ = @import("net/peer_list.zig");
+    _ = @import("stratum/protocol.zig");
+    _ = @import("stratum/Client.zig");
+    _ = @import("Miner.zig");
 }

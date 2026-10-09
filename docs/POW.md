@@ -1,26 +1,9 @@
 # PoW/RandomX info
 
-Some notes about this project's implementation of RandomX.
+Quarry hashes with [zig-randomx](https://github.com/NateBrune/zig-randomx), a Zig port of RandomX
+with an x86-64 JIT and an interpreter. It is pinned in `build.zig.zon`.
 
-## Supported backends
+Monero mainnet, and so every P2Pool sidechain, uses RandomX v1 until the RandomX v2 hard fork
+activates; VMs are created with `.version = .v1`.
 
-An interpreted backend based on a bytecode machine architecture (similar to that of the original
-RandomX implementation) is planned, as well as a JIT-compiled backend targeting x86-64 and other
-platforms later down the line.
-
-## Blake2b-based hashing functions
-
-This project will use the Zig standard library's implementation of Blake2b for the time being.
-
-## AES-based functions
-
-These will likely be implemented using either standard library functionality, or in assembly for
-supported platforms. The first iterations of AES-based generator functions can also be hardcoded,
-which is one approach used by the original RandomX implementation.
-
-## Cache construction using Argon2d
-
-While Zig's standard library provides an implementation of Argon2d, we can't actually use this as it
-doesn't expose the internal state which is used for cache initialization. At present, the best
-approach seems to be essentially copying the needed parts from the standard library, with any
-necessary modifications applied.
+zig-randomx currently requires an x86-64 CPU with AES-NI.
