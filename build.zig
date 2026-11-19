@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    zmq_c.linkSystemLibrary("libzmq", .{ .preferred_link_mode = .static });
+    zmq_c.linkSystemLibrary("libzmq", .{});
     const zmq = zmq_c.createModule();
 
     const quarry = b.addExecutable(.{
@@ -42,7 +42,6 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             // Needed for linking libzmq
             .link_libc = true,
-            .link_libcpp = true,
             .imports = &.{
                 .{ .name = "randomx", .module = randomx },
                 .{ .name = "zmq", .module = zmq },
@@ -52,9 +51,7 @@ pub fn build(b: *std.Build) void {
         // Use LLVM by default. Zig's self-hosted codegen may have some issues
         .use_llvm = use_llvm orelse true,
     });
-    quarry.root_module.linkSystemLibrary("libzmq", .{ .preferred_link_mode = .static });
-    // Static libzmq depends on libsodium, which 0.17 no longer pulls in via pkg-config
-    quarry.root_module.linkSystemLibrary("libsodium", .{ .preferred_link_mode = .static });
+    quarry.root_module.linkSystemLibrary("libzmq", .{});
     b.installArtifact(quarry);
 
     const run_step = b.step("run", "Run the app");
