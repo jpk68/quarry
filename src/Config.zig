@@ -143,7 +143,7 @@ fn exitHelp() noreturn {
 
 fn exitVersion() noreturn {
     std.debug.print("Quarry v{s}\n", .{build.version});
-    if (builtin.mode == .Debug) std.debug.print("{s}\n", .{build.minimum_zig_version});
+    if (builtin.mode == .debug) std.debug.print("{s}\n", .{build.minimum_zig_version});
 
     std.process.exit(0);
 }

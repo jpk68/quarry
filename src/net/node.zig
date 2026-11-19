@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @cImport(@cInclude("zmq.h"));
+const c = @import("zmq");
 
 const common = @import("../common.zig");
 const Mempool = @import("../Mempool.zig");
@@ -108,7 +108,7 @@ pub const NodeConn = struct {
             const port: u16 = 49152 + rand.uintLessThan(u16, 16384);
 
             // Node address, formatted as a null-terminated string for C interop.
-            const host = std.fmt.bufPrintZ(&buf, "tcp://127.0.0.1:{d}", .{port}) catch continue;
+            const host = std.mem.printSentinel(&buf, "tcp://127.0.0.1:{d}", .{port}, 0) catch continue;
 
             if (c.zmq_bind(self.zmq_sock_pub, host) == 0) {
                 self.zmq_port_pub = port;
@@ -161,7 +161,7 @@ pub const NodeConn = struct {
         }
 
         var local_buf: [32]u8 = undefined;
-        const local_addr = std.fmt.bufPrintZ(&local_buf, "tcp://127.0.0.1:{d}", .{self.zmq_port_pub.?}) catch
+        const local_addr = std.mem.printSentinel(&local_buf, "tcp://127.0.0.1:{d}", .{self.zmq_port_pub.?}, 0) catch
             return error.AddressTooLong;
 
         if (c.zmq_connect(self.zmq_sock_sub, local_addr) != 0) {
@@ -178,7 +178,7 @@ pub const NodeConn = struct {
         }
 
         var addr_buf: [128]u8 = undefined;
-        const addr = std.fmt.bufPrintZ(&addr_buf, "tcp://{f}", .{target_addr}) catch
+        const addr = std.mem.printSentinel(&addr_buf, "tcp://{f}", .{target_addr}, 0) catch
             return error.AddressTooLong;
 
         if (c.zmq_connect(self.zmq_sock_sub, addr) != 0) {

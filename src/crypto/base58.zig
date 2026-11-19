@@ -10,7 +10,7 @@ const full_encoded_block_size = encoded_block_sizes[full_block_size];
 
 /// Since this is global, it's implicitly comptime.
 const reverse_alphabet = blk: {
-    var table: [256]i8 = [_]i8{-1} ** 256;
+    var table: [256]i8 = @splat(-1);
     for (alphabet, 0..) |c, i| {
         table[c] = @intCast(i);
     }
@@ -73,7 +73,7 @@ pub fn encode(allocator: Allocator, input: []const u8) Base58Error![]const u8 {
 fn encodeBlock(input: []const u8, block_size: usize, output: []u8) Base58Error!void {
     if (block_size == 0 or input.len > full_block_size) return error.InvalidBlockSize;
 
-    var padded: [8]u8 = .{0} ** 8;
+    var padded: [8]u8 = @splat(0);
     @memcpy(padded[8 - input.len ..], input);
     var num = std.mem.readInt(u64, &padded, .big);
 

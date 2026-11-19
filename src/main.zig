@@ -15,9 +15,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // DebugAllocator is used in Debug mode to detect memory leaks.
     // SmpAllocator is used in Release modes.
     var gpa: std.heap.DebugAllocator(.{}) = .init;
-    const allocator = if (builtin.mode == .Debug) gpa.allocator() else std.heap.smp_allocator;
+    const allocator = if (builtin.mode == .debug) gpa.allocator() else std.heap.smp_allocator;
 
-    defer if (builtin.mode == .Debug) {
+    defer if (builtin.mode == .debug) {
         _ = gpa.deinit();
     };
 
